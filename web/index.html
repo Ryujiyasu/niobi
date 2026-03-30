@@ -90,13 +90,14 @@ const L={
     headerSub:"プライバシー保護型 肝臓移植マッチング",lD:"ドナー数",lR:"レシピエント数",
     thQ:"量子",thD:"差分",tdM:"マッチ数",tdS:"スコア",tdT:"時間",footerMsg:"データは個人から出ない。病院は合意後にのみ関与。",
     steps:[
-      {label:"Step 1: 検査結果をスマホに保存",desc:"病院で受けた検査結果は、暗号化されてあなたのスマホに直接届きます。\n病院も検査結果を見ることはできません。\n病院が結果を見たい場合は「見せてください」とあなたに依頼します。\nデータの主権はあなたにあります。"},
-      {label:"Step 2: 医療データ暗号化",desc:"血液型・MELDスコア・肝容積などの医療データを\n準同型暗号(FHE/CKKS)で暗号化します。\n暗号文は誰にも読めません — サーバ管理者にすら。"},
-      {label:"Step 3: 暗号化したまま適合性計算",desc:"暗号化されたデータの上でABO適合性・MELD優先度・\nグラフト重量比(GRWR)・虚血時間スコアを計算します。\nデータは一度も復号されません。"},
-      {label:"Step 4: ゼロ知識証明の生成",desc:"「この2人は医学的に適合する」を証明します。\n血液型もMELDスコアも身元も一切明かしません。\n証明は誰でも検証できますが、入力は秘匿されたままです。"},
-      {label:"Step 5: 量子アニーリングで最適マッチング",desc:"匿名のスコア行列からQUBO定式化し、\n量子アニーリング(焼きなまし法)で最大マッチングを求めます。\n貪欲法では見落とすマッチを量子が見つけます。"},
-      {label:"Step 6: 適合者への匿名通知",desc:"「適合する人がいます」と匿名で通知されます。\n相手が誰かは合意するまでわかりません。\n通知を無視しても、誰にもバレません。沈黙＝通知なし。"},
-      {label:"Step 7: 合意 → 病院が仲介",desc:"両者が合意して初めて病院が登場します。\n病院はマッチングの経緯を一切知りません。\n手術のみを担当します。"},
+      {label:"Step 1: 検査結果を受け取る",desc:"病院で受けた検査結果が、あなたのスマホに届きます。\nこの時点ではまだ平文（読める状態）です。\n病院も検査結果を見ることはできません — データの主権はあなたにあります。"},
+      {label:"Step 2: スマホ上で暗号化",desc:"あなたのスマホ上で、検査結果が暗号化されます。\nこの瞬間から、あなた以外は誰も読めなくなります。\nサーバ管理者にも、政府にも、病院にも。"},
+      {label:"Step 3: 暗号化データをプールに投入",desc:"暗号化されたデータが匿名でマッチングプールに参加します。\nあなたがプールに入っていることすら誰にも分かりません。"},
+      {label:"Step 4: 暗号化したまま適合性計算",desc:"暗号化されたデータの上でABO適合性・MELD優先度・\nグラフト重量比(GRWR)・虚血時間スコアを計算します。\nデータは一度も復号されません。"},
+      {label:"Step 5: ゼロ知識証明の生成",desc:"「この2人は医学的に適合する」を証明します。\n血液型もMELDスコアも身元も一切明かしません。\n証明は誰でも検証できますが、入力は秘匿されたままです。"},
+      {label:"Step 6: 量子アニーリングで最適マッチング",desc:"匿名のスコア行列からQUBO定式化し、\n量子アニーリング(焼きなまし法)で最大マッチングを求めます。\n貪欲法では見落とすマッチを量子が見つけます。"},
+      {label:"Step 7: 適合者への匿名通知",desc:"「適合する人がいます」と匿名で通知されます。\n相手が誰かは合意するまでわかりません。\n通知を無視しても、誰にもバレません。沈黙＝通知なし。"},
+      {label:"Step 8: 合意 → 病院が仲介",desc:"両者が合意して初めて病院が登場します。\n病院はマッチングの経緯を一切知りません。\n手術のみを担当します。"},
     ],
     impact:(d)=>`量子が ${d} 件多くマッチ = ${d} 人の命を救えます`,done:"完了",
   },
@@ -104,13 +105,14 @@ const L={
     headerSub:"Privacy-Preserving Liver Transplant Matching",lD:"Donors",lR:"Recipients",
     thQ:"Quantum",thD:"Diff",tdM:"Matches",tdS:"Score",tdT:"Time",footerMsg:"Data never leaves the individual. Hospital only after consent.",
     steps:[
-      {label:"Step 1: Save test results to your phone",desc:"Your medical test results are encrypted and sent directly to your phone.\nEven the hospital cannot see the results.\nIf the hospital wants to see them, they must ask you.\nYou own your data."},
-      {label:"Step 2: Encrypt Medical Data",desc:"Encrypt blood type, MELD score, liver volume with\nFully Homomorphic Encryption (FHE/CKKS).\nCiphertext is unreadable — even by the server operator."},
-      {label:"Step 3: Score on Encrypted Data",desc:"Compute ABO compatibility, MELD priority,\ngraft-to-recipient weight ratio (GRWR), ischemia time\non encrypted data. No decryption at any point."},
-      {label:"Step 4: Zero-Knowledge Proof Generation",desc:"Prove \"these two are medically compatible\"\nwithout revealing blood type, MELD, or identity.\nAnyone can verify; no one learns the inputs."},
-      {label:"Step 5: Quantum Optimal Matching",desc:"Formulate QUBO from anonymous score matrix.\nQuantum annealing finds the maximum matching.\nGreedy misses matches that quantum finds."},
-      {label:"Step 6: Anonymous Notification",desc:"\"You have a compatible match\" — sent anonymously.\nCounterpart identity hidden until mutual consent.\nIgnoring is invisible: silence = no notification."},
-      {label:"Step 7: Consent → Hospital Mediates",desc:"Hospital appears ONLY after both individuals agree.\nThe hospital knows nothing about matching.\nIt handles the operation, nothing more."},
+      {label:"Step 1: Receive test results",desc:"Your medical test results arrive on your phone.\nAt this point, they are still plaintext (readable).\nEven the hospital cannot see them — you own your data."},
+      {label:"Step 2: Encrypt on your device",desc:"Your phone encrypts the test results.\nFrom this moment, no one else can read them.\nNot the server, not the government, not the hospital."},
+      {label:"Step 3: Join the pool anonymously",desc:"Encrypted data joins the matching pool anonymously.\nNo one can tell you are in the pool."},
+      {label:"Step 4: Score on Encrypted Data",desc:"Compute ABO compatibility, MELD priority,\nGRWR, ischemia time on encrypted data.\nNo decryption at any point."},
+      {label:"Step 5: Zero-Knowledge Proof",desc:"Prove \"these two are medically compatible\"\nwithout revealing blood type, MELD, or identity.\nAnyone can verify; no one learns the inputs."},
+      {label:"Step 6: Quantum Optimal Matching",desc:"QUBO formulation from anonymous score matrix.\nQuantum annealing finds maximum matching.\nGreedy misses matches that quantum finds."},
+      {label:"Step 7: Anonymous Notification",desc:"\"You have a compatible match\" — sent anonymously.\nCounterpart hidden until mutual consent.\nIgnoring is invisible: silence = no notification."},
+      {label:"Step 8: Consent → Hospital Mediates",desc:"Hospital appears ONLY after both agree.\nKnows nothing about matching.\nHandles the operation, nothing more."},
     ],
     impact:(d)=>`Quantum found ${d} more matches = ${d} lives saved`,done:"Done",
   }
@@ -118,49 +120,24 @@ const L={
 
 // SVG icons per step (compact inline)
 const ICONS_JA=[
-  // Step 1: 提供者と患者（それぞれスマホ持ち）
-  `<text x="25" y="18" font-size="24" text-anchor="middle">🧑</text>
-   <text x="25" y="48" font-size="16" text-anchor="middle">📱</text>
-   <text x="25" y="68" text-anchor="middle" fill="#1565c0" font-size="10" font-weight="bold">提供者</text>
-   <text x="75" y="18" font-size="24" text-anchor="middle">🧑</text>
-   <text x="75" y="48" font-size="16" text-anchor="middle">📱</text>
-   <text x="75" y="68" text-anchor="middle" fill="#e65100" font-size="10" font-weight="bold">患者</text>`,
-  // Step 2: 暗号化
-  `<text x="50" y="30" font-size="32" text-anchor="middle">🔒</text><text x="50" y="55" text-anchor="middle" fill="#2e7d32" font-size="11" font-weight="bold">暗号化</text>`,
-  // Step 3: plat (FHEスコア)
+  `<text x="30" y="22" font-size="20">🏥</text><text x="50" y="40" font-size="14">→</text><text x="70" y="22" font-size="20">📱</text><text x="50" y="62" text-anchor="middle" fill="#1565c0" font-size="9">検査結果（平文）</text>`,
+  `<text x="30" y="28" font-size="18">📄</text><text x="50" y="35" font-size="14">→</text><text x="70" y="28" font-size="18">🔒</text><text x="50" y="58" text-anchor="middle" fill="#2e7d32" font-size="9">暗号化完了</text><text x="50" y="72" text-anchor="middle" fill="#8b949e" font-size="7">誰にも読めない</text>`,
+  `<text x="25" y="28" font-size="18">🔒</text><text x="50" y="35" font-size="14">→</text><text x="75" y="28" font-size="18">🌐</text><text x="50" y="58" text-anchor="middle" fill="#1565c0" font-size="9">匿名プール参加</text>`,
   `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#1565c0" font-size="14" font-weight="bold">plat</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">FHEスコア計算</text>`,
-  // Step 4: argo (ZKP証明)
   `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">argo</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">ゼロ知識証明</text><text x="88" y="18" font-size="16">✓</text>`,
-  // Step 5: 量子マッチング
   `<rect x="5" y="8" width="90" height="54" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/><text x="50" y="30" text-anchor="middle" fill="#7b1fa2" font-size="13" font-weight="bold">Quantum</text><text x="50" y="48" text-anchor="middle" fill="#546e7a" font-size="10">量子最適化</text>`,
-  // Step 6: 匿名通知
-  `<text x="25" y="28" font-size="24" text-anchor="middle">📱</text><text x="25" y="52" text-anchor="middle" fill="#2e7d32" font-size="16" font-weight="bold">❗</text>
-   <text x="50" y="40" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="bold">適合</text>
-   <text x="75" y="28" font-size="24" text-anchor="middle">📱</text><text x="75" y="52" text-anchor="middle" fill="#2e7d32" font-size="16" font-weight="bold">❗</text>`,
-  // Step 7: 合意→病院
-  `<text x="25" y="20" font-size="20" text-anchor="middle">🤝</text><text x="50" y="22" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="bold">合意</text>
-   <text x="75" y="20" font-size="14" text-anchor="middle">↓</text>
-   <rect x="20" y="42" width="60" height="28" rx="5" fill="#f5f5f5" stroke="#90a4ae" stroke-width="1" stroke-dasharray="4,2"/>
-   <text x="50" y="55" text-anchor="middle" fill="#90a4ae" font-size="9">🏥 病院（手術のみ）</text>`,
+  `<text x="25" y="28" font-size="20">📱</text><text x="25" y="55" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">❗</text><text x="50" y="40" text-anchor="middle" fill="#2e7d32" font-size="10">適合</text><text x="75" y="28" font-size="20">📱</text><text x="75" y="55" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">❗</text>`,
+  `<text x="25" y="22" font-size="18">🤝</text><text x="50" y="25" text-anchor="middle" fill="#2e7d32" font-size="9" font-weight="bold">合意</text><text x="75" y="22" font-size="12">↓</text><rect x="20" y="42" width="60" height="26" rx="5" fill="#f5f5f5" stroke="#90a4ae" stroke-width="1" stroke-dasharray="4,2"/><text x="50" y="57" text-anchor="middle" fill="#90a4ae" font-size="8">🏥 病院（手術のみ）</text>`,
 ];
 const ICONS_EN=[
-  `<text x="25" y="18" font-size="24" text-anchor="middle">🧑</text>
-   <text x="25" y="48" font-size="16" text-anchor="middle">📱</text>
-   <text x="25" y="68" text-anchor="middle" fill="#1565c0" font-size="10" font-weight="bold">Donor</text>
-   <text x="75" y="18" font-size="24" text-anchor="middle">🧑</text>
-   <text x="75" y="48" font-size="16" text-anchor="middle">📱</text>
-   <text x="75" y="68" text-anchor="middle" fill="#e65100" font-size="10" font-weight="bold">Patient</text>`,
-  `<text x="50" y="30" font-size="32" text-anchor="middle">🔒</text><text x="50" y="55" text-anchor="middle" fill="#2e7d32" font-size="11" font-weight="bold">Encrypt</text>`,
+  `<text x="30" y="22" font-size="20">🏥</text><text x="50" y="40" font-size="14">→</text><text x="70" y="22" font-size="20">📱</text><text x="50" y="62" text-anchor="middle" fill="#1565c0" font-size="9">Results (plaintext)</text>`,
+  `<text x="30" y="28" font-size="18">📄</text><text x="50" y="35" font-size="14">→</text><text x="70" y="28" font-size="18">🔒</text><text x="50" y="58" text-anchor="middle" fill="#2e7d32" font-size="9">Encrypted</text><text x="50" y="72" text-anchor="middle" fill="#8b949e" font-size="7">Unreadable by anyone</text>`,
+  `<text x="25" y="28" font-size="18">🔒</text><text x="50" y="35" font-size="14">→</text><text x="75" y="28" font-size="18">🌐</text><text x="50" y="58" text-anchor="middle" fill="#1565c0" font-size="9">Anonymous pool</text>`,
   `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#1565c0" font-size="14" font-weight="bold">plat</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">FHE Scoring</text>`,
   `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">argo</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">ZK Proof</text><text x="88" y="18" font-size="16">✓</text>`,
   `<rect x="5" y="8" width="90" height="54" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/><text x="50" y="30" text-anchor="middle" fill="#7b1fa2" font-size="13" font-weight="bold">Quantum</text><text x="50" y="48" text-anchor="middle" fill="#546e7a" font-size="10">Optimal Match</text>`,
-  `<text x="25" y="28" font-size="24" text-anchor="middle">📱</text><text x="25" y="52" text-anchor="middle" fill="#2e7d32" font-size="16" font-weight="bold">❗</text>
-   <text x="50" y="40" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="bold">Match</text>
-   <text x="75" y="28" font-size="24" text-anchor="middle">📱</text><text x="75" y="52" text-anchor="middle" fill="#2e7d32" font-size="16" font-weight="bold">❗</text>`,
-  `<text x="25" y="20" font-size="20" text-anchor="middle">🤝</text><text x="50" y="22" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="bold">Consent</text>
-   <text x="75" y="20" font-size="14" text-anchor="middle">↓</text>
-   <rect x="20" y="42" width="60" height="28" rx="5" fill="#f5f5f5" stroke="#90a4ae" stroke-width="1" stroke-dasharray="4,2"/>
-   <text x="50" y="55" text-anchor="middle" fill="#90a4ae" font-size="9">🏥 Hospital only</text>`,
+  `<text x="25" y="28" font-size="20">📱</text><text x="25" y="55" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">❗</text><text x="50" y="40" text-anchor="middle" fill="#2e7d32" font-size="10">Match</text><text x="75" y="28" font-size="20">📱</text><text x="75" y="55" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">❗</text>`,
+  `<text x="25" y="22" font-size="18">🤝</text><text x="50" y="25" text-anchor="middle" fill="#2e7d32" font-size="9" font-weight="bold">Consent</text><text x="75" y="22" font-size="12">↓</text><rect x="20" y="42" width="60" height="26" rx="5" fill="#f5f5f5" stroke="#90a4ae" stroke-width="1" stroke-dasharray="4,2"/><text x="50" y="57" text-anchor="middle" fill="#90a4ae" font-size="8">🏥 Hospital only</text>`,
 ];
 
 let lang='ja',currentStep=0,worker=null,pendingResolve=null,workerData={};
@@ -179,7 +156,7 @@ function setLang(l){
 function updateNextBtn(){
   const btn=document.getElementById('nextBtn');
   const t=L[lang];
-  if(currentStep>=7){btn.textContent='✓ '+t.done;btn.disabled=true;btn.classList.add('done-btn');return;}
+  if(currentStep>=8){btn.textContent='✓ '+t.done;btn.disabled=true;btn.classList.add('done-btn');return;}
   btn.classList.remove('done-btn');btn.disabled=false;
   btn.textContent='▶ '+t.steps[currentStep].label;
 }
@@ -239,116 +216,112 @@ async function nextStep(){
 }
 
 async function doStep(step){
+  const t=L[lang];
   if(step===1){
-    callWorker(1);
-    const d=await waitFor('keys');
+    callWorker(1);await waitFor('keys');callWorker(2);
+    const enc=await waitFor('encrypted');
     const lines=[];
-    lines.push(['dim','  [engine: Rust/WASM → plat_core::FheBackend]']);
-    d.keys.forEach(k=>{lines.push(['data',`  ${k.id}`]);lines.push(['hex',`    key: ${(k.key_hex||k.keyHex||'').substring(0,40)}...`]);});
-    if(d.total>d.keys.length)lines.push(['dim',`  ... +${d.total-d.keys.length} more`]);
-    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: keys generated locally - never transmitted</span>`]);
+    lines.push(['dim','  [Rust/WASM] シナリオ生成完了']);
+    enc.samples.forEach(s=>{
+      lines.push(['data',`  ${s.id}:`]);
+      lines.push(['result',`    ${typeof s.plaintext==='string'?s.plaintext:JSON.stringify(s.plaintext||s.plain)}`]);
+    });
+    lines.push(['dim',`  合計 ${enc.totalRecords} 件の検査結果`]);
+    lines.push(['privacy-wrap',`<span class="privacy">この時点ではまだ平文 — あなただけが読める</span>`]);
     addCard(0,lines);
   }
   else if(step===2){
-    callWorker(2);
-    const d=await waitFor('encrypted');
+    const enc=workerData['encrypted'];
     const lines=[];
-    lines.push(['dim','  [engine: Rust/WASM → plat_core::FheBackend::encrypt()]']);
-    d.samples.forEach(s=>{
+    lines.push(['dim','  [Rust/WASM] plat_core::FheBackend::encrypt()']);
+    enc.samples.forEach(s=>{
+      const pt=typeof s.plaintext==='string'?s.plaintext:JSON.stringify(s.plaintext||s.plain);
+      const ct=(s.ciphertext_hex||s.cipher||'').substring(0,48);
       lines.push(['data',`  ${s.id}:`]);
-      lines.push(['data',`    plaintext:  ${typeof s.plain==='string'?s.plain:JSON.stringify(s.plain)}`]);
-      lines.push(['hex',`    ciphertext: ${(s.cipher||s.ciphertext_hex||'').substring(0,48)}...`]);
+      lines.push(['data',`    平文:   ${pt}`]);
+      lines.push(['hex', `    暗号文: ${ct}...`]);
     });
-    lines.push(['result',`  ${d.totalRecords} records encrypted`]);
-    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: ciphertext only - unreadable by anyone</span>`]);
+    lines.push(['result',`  ${enc.totalRecords} 件を暗号化完了`]);
+    lines.push(['privacy-wrap',`<span class="privacy">この瞬間から誰にも読めない — サーバ管理者にすら</span>`]);
     addCard(1,lines);
   }
   else if(step===3){
-    callWorker(3);
-    const d=await waitFor('scored');
+    const enc=workerData['encrypted'];const keys=workerData['keys'];
     const lines=[];
-    lines.push(['dim','  [engine: Rust/WASM → score() on FHE ciphertext]']);
-    const n=Math.round(Math.sqrt(d.totalPairs));
-    lines.push(['data',`  ${n}x${n} = ${d.totalPairs} pairs evaluated`]);
-    lines.push(['result',`  Compatible: ${d.nCompat} / ${d.totalPairs} (${(d.nCompat/d.totalPairs*100).toFixed(1)}%)`]);
-    d.scoreSamples.slice(0,5).forEach(s=>lines.push(['data',`    ${s.donor} -> ${s.recip}: ${s.score}`]));
-    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: computed on encrypted data - no decryption</span>`]);
+    lines.push(['dim','  [Rust/WASM] 匿名プール投入']);
+    lines.push(['result',`  ${enc.totalRecords} 件の暗号化データをプールに投入`]);
+    keys.keys.slice(0,4).forEach(k=>lines.push(['hex',`    ${k.id}: key=${(k.key_hex||'').substring(0,32)}...`]));
+    if(keys.total>4)lines.push(['dim',`    ... +${keys.total-4} more`]);
+    lines.push(['privacy-wrap',`<span class="privacy">あなたがプールにいることは誰にも分からない</span>`]);
     addCard(2,lines);
   }
   else if(step===4){
-    callWorker(4);
-    const d=await waitFor('proofs');
+    callWorker(3);const d=await waitFor('scored');
     const lines=[];
-    lines.push(['dim','  [engine: Rust/WASM → argo_core::Proof + verify_proof()]']);
-    d.proofSamples.forEach(p=>{
-      lines.push(['data',`  ${p.donor} <-> ${p.recip}: ${p.bucket} (verified=${p.verified})`]);
-      lines.push(['hex',`    proof: ${(p.proofHex||p.proof_hex||'')}...`]);
-    });
-    lines.push(['result',`  ${d.proofCount} ZKP proofs generated`]);
-    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: proves compatibility, reveals nothing about inputs</span>`]);
+    lines.push(['dim','  [Rust/WASM] score() on FHE ciphertext']);
+    const n=Math.round(Math.sqrt(d.totalPairs));
+    lines.push(['data',`  ${n} × ${n} = ${d.totalPairs} ペアを評価`]);
+    lines.push(['result',`  適合: ${d.nCompat} / ${d.totalPairs} (${(d.nCompat/d.totalPairs*100).toFixed(1)}%)`]);
+    d.scoreSamples.slice(0,5).forEach(s=>lines.push(['data',`    ${s.donor} → ${s.recip}: ${s.score}`]));
+    lines.push(['privacy-wrap',`<span class="privacy">暗号化データの上で計算 — 復号は一度もしない</span>`]);
     addCard(3,lines);
   }
   else if(step===5){
+    callWorker(4);const d=await waitFor('proofs');
     const lines=[];
-    lines.push(['warn','  Rust/WASM: greedy_match() + simulated_annealing() executing...']);
+    lines.push(['dim','  [Rust/WASM] argo_core::Proof + verify_proof()']);
+    d.proofSamples.forEach(p=>{
+      lines.push(['data',`  ${p.donor} ↔ ${p.recip}: ${p.bucket} (verified=${p.verified})`]);
+      lines.push(['hex',`    proof: ${(p.proof_hex||p.proofHex||'')}...`]);
+    });
+    lines.push(['result',`  ${d.proofCount} 件のゼロ知識証明`]);
+    lines.push(['privacy-wrap',`<span class="privacy">適合を証明するが血液型もMELDも身元も明かさない</span>`]);
     addCard(4,lines);
-    const progEl=document.createElement('div');progEl.className='warn';progEl.id='sa-progress';progEl.textContent='  [RUST/WASM] initializing...';
-    document.querySelector('#card4 .card-left').appendChild(progEl);
-
-    callWorker(5);
-    const d=await waitFor('done');
-
-    // Add greedy result
-    const greedyEl=document.createElement('div');greedyEl.className='data';
-    const gs=Number(d.greedyScore),qs=Number(d.quantumScore);
-    greedyEl.textContent=`  Greedy: ${d.greedyMatches} matches (${gs.toFixed(2)})`;
-    document.querySelector('#card4 .card-left').appendChild(greedyEl);
-
-    progEl.className='result';
-    progEl.textContent=`  Quantum: ${d.quantumMatches} matches (${qs.toFixed(2)})`;
-    if(d.diff>0){const w=document.createElement('div');w.className='warn';w.textContent=`  >>> +${d.diff} matches = +${d.diff} lives saved <<<`;document.querySelector('#card4 .card-left').appendChild(w);}
   }
   else if(step===6){
-    const d=workerData['done'];
     const lines=[];
-    lines.push(['dim','  ※デモのため平文を表示。実際の運用では匿名IDのみ']);
+    lines.push(['warn','  [Rust/WASM] greedy_match() + simulated_annealing() 実行中...']);
+    addCard(5,lines);
+    const progEl=document.createElement('div');progEl.className='warn';progEl.id='sa-progress';progEl.textContent='  初期化中...';
+    document.querySelector('#card5 .card-left').appendChild(progEl);
+    callWorker(5);const d=await waitFor('done');
+    const gs=Number(d.greedyScore),qs=Number(d.quantumScore);
+    const gel=document.createElement('div');gel.className='data';
+    gel.textContent=`  Greedy（貪欲法）: ${d.greedyMatches} マッチ (${gs.toFixed(2)})`;
+    document.querySelector('#card5 .card-left').appendChild(gel);
+    progEl.className='result';
+    progEl.textContent=`  Quantum（量子）: ${d.quantumMatches} マッチ (${qs.toFixed(2)})`;
+    if(d.diff>0){const w=document.createElement('div');w.className='warn';w.textContent=`  >>> +${d.diff} マッチ = +${d.diff} 人の命 <<<`;document.querySelector('#card5 .card-left').appendChild(w);}
+  }
+  else if(step===7){
+    const d=workerData['done'];const lines=[];
+    lines.push(['dim','  ※デモのため平文表示。実際は匿名IDのみ']);
     d.matchDetails.slice(0,6).forEach(m=>{
       const dl=m.donor_bt?`提供者(${m.donor_bt}型, ${m.donor_lv}mL, ${m.donor_region})`:`${m.donor}`;
       const rl=m.recip_bt?`患者(${m.recip_bt}型, MELD${m.recip_meld}, ${m.recip_bw}kg, ${m.recip_region})`:`${m.recip}`;
       lines.push(['data',`  ${dl} ↔ ${rl}  適合度=${m.score}`]);
     });
     if(d.matchDetails.length>6)lines.push(['dim',`  +${d.matchDetails.length-6} more`]);
-    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: refusal is invisible — silence = no notification</span>`]);
-    addCard(5,lines);
-  }
-  else if(step===7){
-    const lines=[];
-    lines.push(['data','  Consent via hyde-encrypted channel']);
-    lines.push(['data','  Hospital: operation only — knows nothing about matching']);
-    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: hospital sees nothing about how match was found</span>`]);
+    lines.push(['privacy-wrap',`<span class="privacy">拒否は不可視 — 沈黙 = 通知なし</span>`]);
     addCard(6,lines);
-    // Final results
-    const d=workerData['done'];
-    const gs=Number(d.greedyScore),qs=Number(d.quantumScore);
+  }
+  else if(step===8){
+    const lines=[];
+    lines.push(['data','  hyde暗号化チャネルで合意を交換']);
+    lines.push(['data','  病院は「手術をしてください」とだけ受け取る']);
+    lines.push(['privacy-wrap',`<span class="privacy">病院はマッチングの経緯を一切知らない</span>`]);
+    addCard(7,lines);
+    const d=workerData['done'];const gs=Number(d.greedyScore),qs=Number(d.quantumScore);
     document.getElementById('resultsSection').classList.remove('hidden');
-    document.getElementById('gM').textContent=d.greedyMatches;
-    document.getElementById('qM').textContent=d.quantumMatches;
+    document.getElementById('gM').textContent=d.greedyMatches;document.getElementById('qM').textContent=d.quantumMatches;
     document.getElementById('dM').textContent=d.diff>=0?`+${d.diff}`:d.diff;
-    document.getElementById('gS').textContent=gs.toFixed(2);
-    document.getElementById('qS').textContent=qs.toFixed(2);
+    document.getElementById('gS').textContent=gs.toFixed(2);document.getElementById('qS').textContent=qs.toFixed(2);
     document.getElementById('dS').textContent=gs>0?((qs-gs)/gs*100).toFixed(1)+'%':'N/A';
-    document.getElementById('gT').textContent='-';
-    document.getElementById('qT').textContent='-';
-    // Summary card
-    const complete=document.createElement('div');
-    complete.className='card done';complete.style.cssText='padding:16px;text-align:center;border-left-color:#2e7d32;background:#0d1117;';
-    const diffText=d.diff>0?`<span style="color:#ffa726;font-size:18px;">+${d.diff} lives saved</span>`:`<span style="color:#c9d1d9;">Same matches</span>`;
-    complete.innerHTML=`<div style="color:#3fb950;font-size:16px;font-weight:bold;">✓ COMPLETE</div>
-      <div style="color:#c9d1d9;font-size:14px;margin-top:8px;">Greedy: ${d.greedyMatches} matches (${gs.toFixed(2)}) | Quantum: ${d.quantumMatches} matches (${qs.toFixed(2)})</div>
-      <div style="margin-top:8px;">${diffText}</div>
-      <div style="color:#8b949e;font-size:12px;margin-top:8px;">Brute force: ${document.getElementById('nDonors').value}! = impossible</div>`;
-    document.getElementById('cards').appendChild(complete);
-    complete.scrollIntoView({behavior:'smooth',block:'end'});
+    document.getElementById('gT').textContent='-';document.getElementById('qT').textContent='-';
+    const c=document.createElement('div');c.className='card done';c.style.cssText='padding:16px;text-align:center;border-left-color:#2e7d32;background:#0d1117;';
+    const dt=d.diff>0?`<span style="color:#ffa726;font-size:18px;">+${d.diff} 人の命を救える</span>`:`<span style="color:#c9d1d9;">同数マッチ</span>`;
+    c.innerHTML=`<div style="color:#3fb950;font-size:16px;font-weight:bold;">✓ 完了</div><div style="color:#c9d1d9;font-size:14px;margin-top:8px;">Greedy: ${d.greedyMatches} | Quantum: ${d.quantumMatches}</div><div style="margin-top:8px;">${dt}</div><div style="color:#8b949e;font-size:12px;margin-top:8px;">全探索: ${document.getElementById('nDonors').value}! = 不可能</div>`;
+    document.getElementById('cards').appendChild(c);c.scrollIntoView({behavior:'smooth',block:'end'});
   }
 }
 
