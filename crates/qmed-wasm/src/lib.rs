@@ -118,8 +118,8 @@ const BT: [&str; 4] = ["O", "A", "B", "AB"];
 
 // --- Scenario generation ---
 
-fn gen(nd: usize, nr: usize, seed: u64) -> (Vec<(u8, f64, f64)>, Vec<(u8, f64, f64, f64, f64)>) {
-    let mut rng = seed;
+fn gen(nd: usize, nr: usize, seed: u32) -> (Vec<(u8, f64, f64)>, Vec<(u8, f64, f64, f64, f64)>) {
+    let mut rng: u64 = seed as u64;
     let mut next = || -> f64 { rng = rng.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407); (rng >> 33) as f64 / (1u64 << 31) as f64 };
     let pick = |r: f64| -> u8 { if r < 0.30 { 0 } else if r < 0.70 { 1 } else if r < 0.90 { 2 } else { 3 } };
     let locs = [0.0, 100.0, 250.0, 400.0, 550.0, 700.0, 850.0, 1000.0];
@@ -134,7 +134,7 @@ fn gen(nd: usize, nr: usize, seed: u64) -> (Vec<(u8, f64, f64)>, Vec<(u8, f64, f
 
 /// Step 1: Generate keys. Returns JSON with key data.
 #[wasm_bindgen]
-pub fn step1_keys(nd: usize, nr: usize, seed: u64) -> String {
+pub fn step1_keys(nd: usize, nr: usize, seed: u32) -> String {
     let mut keys = Vec::new();
     for i in 0..(nd + nr) {
         let id = if i < nd { format!("anon-d{:03}", i) } else { format!("anon-r{:03}", i - nd) };
@@ -146,7 +146,7 @@ pub fn step1_keys(nd: usize, nr: usize, seed: u64) -> String {
 
 /// Step 2: Encrypt records. Returns JSON with plaintext vs ciphertext.
 #[wasm_bindgen]
-pub fn step2_encrypt(nd: usize, nr: usize, seed: u64) -> String {
+pub fn step2_encrypt(nd: usize, nr: usize, seed: u32) -> String {
     let backend = TfheScoring;
     let (ds, rs) = gen(nd, nr, seed);
     let mut samples = Vec::new();
@@ -165,7 +165,7 @@ pub fn step2_encrypt(nd: usize, nr: usize, seed: u64) -> String {
 
 /// Step 3: Score matrix. Returns compatible pairs and samples.
 #[wasm_bindgen]
-pub fn step3_score(nd: usize, nr: usize, seed: u64) -> String {
+pub fn step3_score(nd: usize, nr: usize, seed: u32) -> String {
     let (ds, rs) = gen(nd, nr, seed);
     let max_wd = rs.iter().map(|r| r.4).fold(0.0_f64, f64::max);
     let mut n_compat = 0;
@@ -186,7 +186,7 @@ pub fn step3_score(nd: usize, nr: usize, seed: u64) -> String {
 
 /// Step 4: ZKP proofs. Returns proof samples with hex.
 #[wasm_bindgen]
-pub fn step4_proofs(nd: usize, nr: usize, seed: u64) -> String {
+pub fn step4_proofs(nd: usize, nr: usize, seed: u32) -> String {
     let (ds, rs) = gen(nd, nr, seed);
     let max_wd = rs.iter().map(|r| r.4).fold(0.0_f64, f64::max);
     let mut count = 0;
@@ -215,7 +215,7 @@ pub fn step4_proofs(nd: usize, nr: usize, seed: u64) -> String {
 
 /// Step 5: Matching with SA progress callback.
 #[wasm_bindgen]
-pub fn step5_matching(nd: usize, nr: usize, sweeps: usize, seed: u64, progress_cb: &js_sys::Function) -> String {
+pub fn step5_matching(nd: usize, nr: usize, sweeps: usize, seed: u32, progress_cb: &js_sys::Function) -> String {
     let (ds, rs) = gen(nd, nr, seed);
     let max_wd = rs.iter().map(|r| r.4).fold(0.0_f64, f64::max);
     let scores: Vec<Vec<f64>> = ds.iter().map(|&(dbt, dlv, dkm)| {
