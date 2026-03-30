@@ -202,7 +202,8 @@ function initWorker(){
 }
 function callWorker(step){
   const nd=+document.getElementById('nDonors').value,nr=+document.getElementById('nRecipients').value,sw=+document.getElementById('nSweeps').value;
-  worker.postMessage({nd,nr,sweeps:sw,step});
+  const seed=workerData._seed||42;
+  worker.postMessage({nd,nr,sweeps:sw,step,seed});
 }
 function waitFor(type){return new Promise(r=>{if(workerData[type])return r(workerData[type]);pendingResolve=r;});}
 
@@ -218,22 +219,23 @@ async function nextStep(){
 async function doStep(step){
   const t=L[lang];
   if(step===1){
+    workerData._seed=Date.now()%100000;
     callWorker(1);await waitFor('keys');callWorker(2);
     const enc=await waitFor('encrypted');
     const lines=[];
-    lines.push(['dim','  [Rust/WASM] シナリオ生成完了']);
+    lines.push(['dim','  [実行エンジン: Rust/WASM]']);
     enc.samples.forEach(s=>{
       lines.push(['data',`  ${s.id}:`]);
       lines.push(['result',`    ${typeof s.plaintext==='string'?s.plaintext:JSON.stringify(s.plaintext||s.plain)}`]);
     });
-    lines.push(['dim',`  合計 ${enc.totalRecords} 件の検査結果`]);
+    lines.push(['dim',`  合計 ${enc.totalRecords} 件の検査結果を受信`]);
     lines.push(['privacy-wrap',`<span class="privacy">この時点ではまだ平文 — あなただけが読める</span>`]);
     addCard(0,lines);
   }
   else if(step===2){
     const enc=workerData['encrypted'];
     const lines=[];
-    lines.push(['dim','  [Rust/WASM] plat_core::FheBackend::encrypt()']);
+    lines.push(['dim','  [実行エンジン: Rust/WASM → plat暗号化]']);
     enc.samples.forEach(s=>{
       const pt=typeof s.plaintext==='string'?s.plaintext:JSON.stringify(s.plaintext||s.plain);
       const ct=(s.ciphertext_hex||s.cipher||'').substring(0,48);
@@ -248,39 +250,39 @@ async function doStep(step){
   else if(step===3){
     const enc=workerData['encrypted'];const keys=workerData['keys'];
     const lines=[];
-    lines.push(['dim','  [Rust/WASM] 匿名プール投入']);
+    lines.push(['dim','  [実行エンジン: Rust/WASM → 匿名プール投入]']);
     lines.push(['result',`  ${enc.totalRecords} 件の暗号化データをプールに投入`]);
-    keys.keys.slice(0,4).forEach(k=>lines.push(['hex',`    ${k.id}: key=${(k.key_hex||'').substring(0,32)}...`]));
-    if(keys.total>4)lines.push(['dim',`    ... +${keys.total-4} more`]);
+    keys.keys.slice(0,4).forEach(k=>lines.push(['hex',`    ${k.id}: 鍵=${(k.key_hex||'').substring(0,32)}...`]));
+    if(keys.total>4)lines.push(['dim',`    ... 他 ${keys.total-4} 件`]);
     lines.push(['privacy-wrap',`<span class="privacy">あなたがプールにいることは誰にも分からない</span>`]);
     addCard(2,lines);
   }
   else if(step===4){
     callWorker(3);const d=await waitFor('scored');
     const lines=[];
-    lines.push(['dim','  [Rust/WASM] score() on FHE ciphertext']);
+    lines.push(['dim','  [実行エンジン: Rust/WASM → plat FHEスコア計算]']);
     const n=Math.round(Math.sqrt(d.totalPairs));
     lines.push(['data',`  ${n} × ${n} = ${d.totalPairs} ペアを評価`]);
-    lines.push(['result',`  適合: ${d.nCompat} / ${d.totalPairs} (${(d.nCompat/d.totalPairs*100).toFixed(1)}%)`]);
-    d.scoreSamples.slice(0,5).forEach(s=>lines.push(['data',`    ${s.donor} → ${s.recip}: ${s.score}`]));
+    lines.push(['result',`  適合ペア: ${d.nCompat} / ${d.totalPairs} (${(d.nCompat/d.totalPairs*100).toFixed(1)}%)`]);
+    d.scoreSamples.slice(0,5).forEach(s=>lines.push(['data',`    提供者${s.donor} → 患者${s.recip}: 適合度 ${s.score}`]));
     lines.push(['privacy-wrap',`<span class="privacy">暗号化データの上で計算 — 復号は一度もしない</span>`]);
     addCard(3,lines);
   }
   else if(step===5){
     callWorker(4);const d=await waitFor('proofs');
     const lines=[];
-    lines.push(['dim','  [Rust/WASM] argo_core::Proof + verify_proof()']);
+    lines.push(['dim','  [実行エンジン: Rust/WASM → argo ゼロ知識証明]']);
     d.proofSamples.forEach(p=>{
-      lines.push(['data',`  ${p.donor} ↔ ${p.recip}: ${p.bucket} (verified=${p.verified})`]);
-      lines.push(['hex',`    proof: ${(p.proof_hex||p.proofHex||'')}...`]);
+      lines.push(['data',`  ${p.donor} ↔ ${p.recip}: 適合度=${p.bucket} (検証=${p.verified})`]);
+      lines.push(['hex',`    証明: ${(p.proof_hex||p.proofHex||'')}...`]);
     });
-    lines.push(['result',`  ${d.proofCount} 件のゼロ知識証明`]);
+    lines.push(['result',`  ${d.proofCount} 件のゼロ知識証明を生成`]);
     lines.push(['privacy-wrap',`<span class="privacy">適合を証明するが血液型もMELDも身元も明かさない</span>`]);
     addCard(4,lines);
   }
   else if(step===6){
     const lines=[];
-    lines.push(['warn','  [Rust/WASM] greedy_match() + simulated_annealing() 実行中...']);
+    lines.push(['warn','  [実行エンジン: Rust/WASM] 貪欲法 + 量子焼きなまし法 実行中...']);
     addCard(5,lines);
     const progEl=document.createElement('div');progEl.className='warn';progEl.id='sa-progress';progEl.textContent='  初期化中...';
     document.querySelector('#card5 .card-left').appendChild(progEl);

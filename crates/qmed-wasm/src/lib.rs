@@ -134,7 +134,7 @@ fn gen(nd: usize, nr: usize, seed: u64) -> (Vec<(u8, f64, f64)>, Vec<(u8, f64, f
 
 /// Step 1: Generate keys. Returns JSON with key data.
 #[wasm_bindgen]
-pub fn step1_keys(nd: usize, nr: usize) -> String {
+pub fn step1_keys(nd: usize, nr: usize, seed: u64) -> String {
     let mut keys = Vec::new();
     for i in 0..(nd + nr) {
         let id = if i < nd { format!("anon-d{:03}", i) } else { format!("anon-r{:03}", i - nd) };
@@ -146,27 +146,27 @@ pub fn step1_keys(nd: usize, nr: usize) -> String {
 
 /// Step 2: Encrypt records. Returns JSON with plaintext vs ciphertext.
 #[wasm_bindgen]
-pub fn step2_encrypt(nd: usize, nr: usize) -> String {
+pub fn step2_encrypt(nd: usize, nr: usize, seed: u64) -> String {
     let backend = TfheScoring;
-    let (ds, rs) = gen(nd, nr, 42);
+    let (ds, rs) = gen(nd, nr, seed);
     let mut samples = Vec::new();
     for (i, &(bt, lv, km)) in ds.iter().enumerate().take(3) {
-        let plain = format!("{{\"blood_type\":\"{}\",\"liver_volume_ml\":{},\"region_km\":{}}}", BT[bt as usize], lv, km.round());
+        let plain = format!("{{\"血液型\":\"{}\",\"肝容積_mL\":{},\"地域_km\":{}}}", BT[bt as usize], lv, km.round());
         let cipher = backend.encrypt(plain.as_bytes()).unwrap();
-        samples.push(serde_json::json!({"id": format!("anon-d{:03}", i), "plaintext": plain, "ciphertext_hex": to_hex(&cipher[..cipher.len().min(28)])}));
+        samples.push(serde_json::json!({"id": format!("提供者{:03}", i+1), "plaintext": plain, "ciphertext_hex": to_hex(&cipher[..cipher.len().min(32)])}));
     }
     for (i, &(bt, meld, bw, km, wd)) in rs.iter().enumerate().take(2) {
-        let plain = format!("{{\"blood_type\":\"{}\",\"meld\":{},\"body_weight_kg\":{},\"waiting_days\":{}}}", BT[bt as usize], meld, bw, wd);
+        let plain = format!("{{\"血液型\":\"{}\",\"MELD\":{},\"体重_kg\":{},\"待機日数\":{}}}", BT[bt as usize], meld, bw, wd);
         let cipher = backend.encrypt(plain.as_bytes()).unwrap();
-        samples.push(serde_json::json!({"id": format!("anon-r{:03}", i), "plaintext": plain, "ciphertext_hex": to_hex(&cipher[..cipher.len().min(28)])}));
+        samples.push(serde_json::json!({"id": format!("患者{:03}", i+1), "plaintext": plain, "ciphertext_hex": to_hex(&cipher[..cipher.len().min(32)])}));
     }
     serde_json::json!({"samples": samples, "total_records": nd + nr}).to_string()
 }
 
 /// Step 3: Score matrix. Returns compatible pairs and samples.
 #[wasm_bindgen]
-pub fn step3_score(nd: usize, nr: usize) -> String {
-    let (ds, rs) = gen(nd, nr, 42);
+pub fn step3_score(nd: usize, nr: usize, seed: u64) -> String {
+    let (ds, rs) = gen(nd, nr, seed);
     let max_wd = rs.iter().map(|r| r.4).fold(0.0_f64, f64::max);
     let mut n_compat = 0;
     let mut samples = Vec::new();
@@ -186,8 +186,8 @@ pub fn step3_score(nd: usize, nr: usize) -> String {
 
 /// Step 4: ZKP proofs. Returns proof samples with hex.
 #[wasm_bindgen]
-pub fn step4_proofs(nd: usize, nr: usize) -> String {
-    let (ds, rs) = gen(nd, nr, 42);
+pub fn step4_proofs(nd: usize, nr: usize, seed: u64) -> String {
+    let (ds, rs) = gen(nd, nr, seed);
     let max_wd = rs.iter().map(|r| r.4).fold(0.0_f64, f64::max);
     let mut count = 0;
     let mut samples = Vec::new();
@@ -215,8 +215,8 @@ pub fn step4_proofs(nd: usize, nr: usize) -> String {
 
 /// Step 5: Matching with SA progress callback.
 #[wasm_bindgen]
-pub fn step5_matching(nd: usize, nr: usize, sweeps: usize, progress_cb: &js_sys::Function) -> String {
-    let (ds, rs) = gen(nd, nr, 42);
+pub fn step5_matching(nd: usize, nr: usize, sweeps: usize, seed: u64, progress_cb: &js_sys::Function) -> String {
+    let (ds, rs) = gen(nd, nr, seed);
     let max_wd = rs.iter().map(|r| r.4).fold(0.0_f64, f64::max);
     let scores: Vec<Vec<f64>> = ds.iter().map(|&(dbt, dlv, dkm)| {
         rs.iter().map(|&(rbt, rm, rbw, rkm, rwd)| score(dbt, dlv, dkm, rbt, rm, rbw, rkm, rwd, max_wd)).collect()
