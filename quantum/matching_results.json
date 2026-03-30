@@ -1,0 +1,97 @@
+[
+  {
+    "n_donors": 5,
+    "n_recipients": 5,
+    "greedy": {
+      "matches": 4,
+      "score": 2.6570476476953764,
+      "time": 2.9705988708883524e-05
+    },
+    "quantum": {
+      "matches": 4,
+      "score": 2.6570476476953764,
+      "time": 73.67974873300409
+    },
+    "bruteforce": {
+      "matches": 4,
+      "score": 2.6570476476953764,
+      "time": 0.0003270789748057723
+    }
+  },
+  {
+    "n_donors": 8,
+    "n_recipients": 8,
+    "greedy": {
+      "matches": 6,
+      "score": 4.351417943158155,
+      "time": 4.75000124424696e-05
+    },
+    "quantum": {
+      "matches": 6,
+      "score": 4.40565079058476,
+      "time": 250.34709684504196
+    },
+    "bruteforce": {
+      "matches": 6,
+      "score": 4.40565079058476,
+      "time": 0.1263060980127193
+    }
+  },
+  {
+    "n_donors": 10,
+    "n_recipients": 10,
+    "greedy": {
+      "matches": 7,
+      "score": 4.954871572103686,
+      "time": 6.060401210561395e-05
+    },
+    "quantum": {
+      "matches": 7,
+      "score": 5.018173603754018,
+      "time": 349.98050728201633
+    },
+    "bruteforce": {
+      "matches": 7,
+      "score": 5.018173603754018,
+      "time": 13.657836058991961
+    }
+  },
+  {
+    "n_donors": 15,
+    "n_recipients": 15,
+    "greedy": {
+      "matches": 12,
+      "score": 7.7342702710644335,
+      "time": 0.00014899001689627767
+    },
+    "quantum": {
+      "matches": 14,
+      "score": 8.679067015469688,
+      "time": 1461.3671266890015
+    },
+    "bruteforce": {
+      "matches": null,
+      "score": null,
+      "time": null
+    }
+  },
+  {
+    "n_donors": 20,
+    "n_recipients": 20,
+    "greedy": {
+      "matches": 15,
+      "score": 10.676988564238739,
+      "time": 0.0002541490248404443
+    },
+    "quantum": {
+      "matches": 19,
+      "score": 12.51447913133203,
+      "time": 3322.3395370170474
+    },
+    "bruteforce": {
+      "matches": null,
+      "score": null,
+      "time": null
+    }
+  }
+]
