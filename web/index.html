@@ -3,50 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>qmed - Privacy-Preserving Liver Transplant Matching</title>
+<title>qmed</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Courier New',monospace;background:#0a0e1a;color:#e0e0e0;font-size:14px;}
-.container{max-width:1400px;margin:0 auto;padding:16px;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f5f7fa;color:#1a1a2e;font-size:14px;}
+.container{max-width:1100px;margin:0 auto;padding:16px;}
 header{text-align:center;padding:20px 0 12px;position:relative;}
-header h1{font-size:2em;color:#4fc3f7;letter-spacing:2px;}
-header .sub{color:#78909c;font-size:0.95em;margin-top:4px;}
+header h1{font-size:2.2em;color:#1565c0;letter-spacing:2px;}
+header .sub{color:#546e7a;font-size:0.95em;margin-top:4px;}
 .lang-toggle{position:absolute;top:12px;right:0;display:flex;}
-.lang-btn{background:#1a2332;color:#78909c;border:1px solid #2a3a4a;padding:4px 12px;cursor:pointer;font-size:12px;}
+.lang-btn{background:#e8eaf6;color:#546e7a;border:1px solid #c5cae9;padding:4px 12px;cursor:pointer;font-size:12px;}
 .lang-btn:first-child{border-radius:3px 0 0 3px;}.lang-btn:last-child{border-radius:0 3px 3px 0;}
 .lang-btn.active{background:#1565c0;color:white;border-color:#1565c0;}
-
 .controls{display:flex;gap:12px;justify-content:center;margin:12px 0;flex-wrap:wrap;align-items:end;}
-.controls label{color:#78909c;font-size:0.85em;}
-.controls input{background:#111827;border:1px solid #2a3a4a;color:#4fc3f7;padding:6px 8px;border-radius:3px;font-family:inherit;font-size:14px;width:70px;}
-.btn{background:#1565c0;color:white;border:none;padding:8px 24px;border-radius:4px;font-family:inherit;font-size:14px;cursor:pointer;font-weight:bold;}
-.btn:hover{background:#1976d2;}.btn.running{background:#455a64;cursor:wait;}
+.controls label{color:#546e7a;font-size:0.85em;}
+.controls input{background:white;border:1px solid #c5cae9;color:#1a1a2e;padding:6px 8px;border-radius:3px;font-size:14px;width:70px;}
 
-.main{display:grid;grid-template-columns:1fr 320px;gap:16px;margin:12px 0;}
-@media(max-width:900px){.main{grid-template-columns:1fr;}.viz{display:none;}}
+.cards{display:flex;flex-direction:column;gap:0;margin:12px 0;}
+.card{display:grid;grid-template-columns:1fr 260px;background:white;border-left:4px solid #c5cae9;overflow:hidden;animation:cardIn 0.4s ease;border-radius:6px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+@media(max-width:800px){.card{grid-template-columns:1fr;}.card-viz{display:none;}}
+.card-left{padding:16px 20px;font-family:'Courier New',monospace;font-size:14px;line-height:1.7;}
+.card-viz{background:#f0f4f8;padding:14px;display:flex;align-items:center;justify-content:center;border-left:1px solid #e0e0e0;}
+.card-viz svg{width:100%;max-width:220px;height:auto;}
+.card.active{border-left-color:#1565c0;box-shadow:0 2px 8px rgba(21,101,192,0.15);}
+.card.done{border-left-color:#2e7d32;}
 
-.log{background:#111827;border:1px solid #1a2332;border-radius:6px;padding:12px;min-height:500px;max-height:80vh;overflow-y:auto;font-size:13px;line-height:1.6;}
-.log .line{margin:1px 0;white-space:pre-wrap;word-break:break-all;}
-.log .header{color:#4fc3f7;font-weight:bold;}
-.log .step-label{color:#ffa726;font-weight:bold;}
-.log .data{color:#78909c;}
-.log .hex{color:#66bb6a;font-size:12px;}
-.log .result{color:#66bb6a;font-weight:bold;}
-.log .warn{color:#ffa726;}
-.log .dim{color:#546e7a;}
-.log .progress-bar{display:inline-block;}
-.log .privacy{color:#a5d6a7;background:#1b5e20;padding:0 4px;border-radius:2px;font-size:12px;}
+.card .desc{color:#e65100;font-size:15px;margin-bottom:10px;font-weight:500;white-space:pre-line;line-height:1.6;}
+.card .step-label{color:#1565c0;font-weight:bold;font-size:15px;margin-bottom:6px;}
+.card .data{color:#37474f;font-size:13px;}
+.card .hex{color:#2e7d32;font-size:12px;}
+.card .result{color:#2e7d32;font-weight:bold;font-size:14px;}
+.card .dim{color:#90a4ae;font-size:12px;}
+.card .warn{color:#e65100;font-weight:bold;font-size:14px;}
+.card .privacy{display:inline-block;background:#e8f5e9;color:#1b5e20;padding:3px 10px;border-radius:3px;font-size:13px;margin-top:6px;border:1px solid #c8e6c9;}
 
-.viz{background:#111827;border:1px solid #1a2332;border-radius:6px;padding:12px;position:sticky;top:16px;height:fit-content;}
-.viz svg{width:100%;height:auto;}
-.viz-node{transition:opacity 0.4s;}.viz-node.off{opacity:0.12;}.viz-node.on{opacity:1;}
+.next-btn{display:block;width:100%;background:#1565c0;color:white;border:none;padding:14px;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;transition:all 0.2s;font-family:inherit;}
+.next-btn:hover:not(:disabled){background:#1976d2;transform:translateY(-1px);}
+.next-btn:disabled{background:#e0e0e0;color:#9e9e9e;cursor:default;}
+.next-btn.done-btn{background:#2e7d32;color:white;}
 
 .results{margin:16px 0;}
-.results table{width:100%;border-collapse:collapse;background:#111827;border-radius:6px;overflow:hidden;}
-.results th{background:#1a2332;padding:8px;text-align:left;color:#4fc3f7;font-size:0.85em;}
-.results td{padding:8px;border-bottom:1px solid #1a2332;font-size:0.9em;}
+.results table{width:100%;border-collapse:collapse;background:white;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+.results th{background:#e3f2fd;padding:10px;text-align:left;color:#1565c0;font-size:0.95em;}
+.results td{padding:10px;border-bottom:1px solid #e0e0e0;font-size:1em;}
 .hidden{display:none;}
-footer{text-align:center;padding:20px 0;color:#546e7a;font-size:0.8em;}
+footer{text-align:center;padding:20px 0;color:#78909c;font-size:0.85em;}
 footer a{color:#4fc3f7;text-decoration:none;}
 </style>
 </head>
@@ -58,83 +60,21 @@ footer a{color:#4fc3f7;text-decoration:none;}
   <div class="sub" id="headerSub"></div>
   <div class="sub" style="color:#ffa726;font-size:0.85em;">NEDO Challenge Q-2 | hyde x argo x plat x Quantum</div>
 </header>
-
 <div class="controls">
-  <div><label data-i18n="labelDonors"></label><br><input type="number" id="nDonors" value="20" min="2" max="500"></div>
-  <div><label data-i18n="labelRecipients"></label><br><input type="number" id="nRecipients" value="20" min="2" max="500"></div>
-  <div><label>Sweeps</label><br><input type="number" id="nSweeps" value="2000" min="100" max="50000"></div>
-  <button class="btn" id="runBtn" onclick="run()" data-i18n="btnRun"></button>
+  <div><label id="lD"></label><br><input type="number" id="nDonors" value="20" min="2" max="500"></div>
+  <div><label id="lR"></label><br><input type="number" id="nRecipients" value="20" min="2" max="500"></div>
+  <div><label id="lSw">計算回数</label><br><input type="number" id="nSweeps" value="2000" min="100" max="50000"></div>
 </div>
 
-<div class="main">
-  <div class="log" id="log"></div>
-  <div class="viz">
-    <svg viewBox="0 0 280 700" xmlns="http://www.w3.org/2000/svg">
-      <g id="vP" class="viz-node off">
-        <circle cx="70" cy="36" r="14" fill="#4fc3f7"/><text x="70" y="40" text-anchor="middle" fill="#0a0e1a" font-size="12" font-weight="bold">D</text>
-        <rect x="58" y="54" width="24" height="32" rx="4" fill="#1a2332" stroke="#4fc3f7" stroke-width="1.5"/><rect x="62" y="58" width="16" height="20" rx="1" fill="#0a0e1a"/>
-        <circle cx="210" cy="36" r="14" fill="#ffa726"/><text x="210" y="40" text-anchor="middle" fill="#0a0e1a" font-size="12" font-weight="bold">R</text>
-        <rect x="198" y="54" width="24" height="32" rx="4" fill="#1a2332" stroke="#ffa726" stroke-width="1.5"/><rect x="202" y="58" width="16" height="20" rx="1" fill="#0a0e1a"/>
-      </g>
-      <g id="vE" class="viz-node off">
-        <line x1="70" y1="90" x2="70" y2="125" stroke="#4fc3f7" stroke-width="1.5" stroke-dasharray="3,3"/>
-        <line x1="210" y1="90" x2="210" y2="125" stroke="#ffa726" stroke-width="1.5" stroke-dasharray="3,3"/>
-        <rect x="54" y="128" width="32" height="22" rx="3" fill="#1b5e20" stroke="#66bb6a" stroke-width="1.5"/>
-        <path d="M64 128v-7a6 6 0 0 1 12 0v7" fill="none" stroke="#66bb6a" stroke-width="1.5"/>
-        <text x="70" y="143" text-anchor="middle" fill="#a5d6a7" font-size="7">ENC</text>
-        <rect x="194" y="128" width="32" height="22" rx="3" fill="#1b5e20" stroke="#66bb6a" stroke-width="1.5"/>
-        <path d="M204 128v-7a6 6 0 0 1 12 0v7" fill="none" stroke="#66bb6a" stroke-width="1.5"/>
-        <text x="210" y="143" text-anchor="middle" fill="#a5d6a7" font-size="7">ENC</text>
-      </g>
-      <g id="vS" class="viz-node off">
-        <line x1="70" y1="154" x2="140" y2="200" stroke="#4fc3f7" stroke-width="1.5" stroke-dasharray="3,3"/>
-        <line x1="210" y1="154" x2="140" y2="200" stroke="#ffa726" stroke-width="1.5" stroke-dasharray="3,3"/>
-        <rect x="105" y="195" width="70" height="36" rx="6" fill="#1a2332" stroke="#4fc3f7" stroke-width="1.5"/>
-        <text x="140" y="210" text-anchor="middle" fill="#4fc3f7" font-size="9" font-weight="bold">plat</text>
-        <text x="140" y="224" text-anchor="middle" fill="#78909c" font-size="7">FHE Score</text>
-      </g>
-      <g id="vZ" class="viz-node off">
-        <line x1="140" y1="235" x2="140" y2="275" stroke="#66bb6a" stroke-width="1.5" stroke-dasharray="3,3"/>
-        <rect x="105" y="275" width="70" height="36" rx="6" fill="#1a2332" stroke="#66bb6a" stroke-width="1.5"/>
-        <text x="140" y="290" text-anchor="middle" fill="#66bb6a" font-size="9" font-weight="bold">argo</text>
-        <text x="140" y="304" text-anchor="middle" fill="#78909c" font-size="7">ZKP</text>
-        <circle cx="185" cy="293" r="8" fill="#1b5e20"/><path d="M180 293l3 3 7-7" fill="none" stroke="#66bb6a" stroke-width="1.5"/>
-      </g>
-      <g id="vQ" class="viz-node off">
-        <line x1="140" y1="315" x2="140" y2="355" stroke="#9c27b0" stroke-width="1.5" stroke-dasharray="3,3"/>
-        <rect x="90" y="355" width="100" height="44" rx="6" fill="#1a2332" stroke="#9c27b0" stroke-width="1.5"/>
-        <text x="140" y="373" text-anchor="middle" fill="#ce93d8" font-size="9" font-weight="bold">Quantum</text>
-        <text x="140" y="389" text-anchor="middle" fill="#78909c" font-size="7" id="vQprog">QUBO</text>
-      </g>
-      <g id="vN" class="viz-node off">
-        <line x1="120" y1="403" x2="70" y2="460" stroke="#4fc3f7" stroke-width="1.5" stroke-dasharray="3,3"/>
-        <line x1="160" y1="403" x2="210" y2="460" stroke="#ffa726" stroke-width="1.5" stroke-dasharray="3,3"/>
-        <rect x="54" y="460" width="32" height="36" rx="4" fill="#1a2332" stroke="#4fc3f7" stroke-width="1.5"/>
-        <text x="70" y="482" text-anchor="middle" fill="#66bb6a" font-size="12">!</text>
-        <rect x="194" y="460" width="32" height="36" rx="4" fill="#1a2332" stroke="#ffa726" stroke-width="1.5"/>
-        <text x="210" y="482" text-anchor="middle" fill="#66bb6a" font-size="12">!</text>
-        <text x="140" y="485" text-anchor="middle" fill="#66bb6a" font-size="9" id="vMtxt">MATCH</text>
-      </g>
-      <g id="vH" class="viz-node off">
-        <line x1="86" y1="500" x2="120" y2="530" stroke="#4fc3f7" stroke-width="1.5"/>
-        <line x1="194" y1="500" x2="160" y2="530" stroke="#ffa726" stroke-width="1.5"/>
-        <text x="140" y="533" text-anchor="middle" fill="#66bb6a" font-size="8" id="vCtxt">CONSENT</text>
-        <line x1="140" y1="540" x2="140" y2="560" stroke="#66bb6a" stroke-width="1.5"/>
-        <polygon points="134,560 140,568 146,560" fill="#66bb6a"/>
-        <rect x="100" y="572" width="80" height="34" rx="5" fill="#1a2332" stroke="#78909c" stroke-width="1" stroke-dasharray="4,2"/>
-        <text x="140" y="588" text-anchor="middle" fill="#78909c" font-size="8" id="vHtxt">Hospital</text>
-        <text x="140" y="600" text-anchor="middle" fill="#546e7a" font-size="6" id="vHsub">operation only</text>
-      </g>
-    </svg>
-  </div>
-</div>
+<div class="cards" id="cards"></div>
+<button class="next-btn" id="nextBtn" onclick="nextStep()"></button>
 
 <div class="results hidden" id="resultsSection">
   <table>
-    <tr><th></th><th>Greedy</th><th id="thQ">Quantum</th><th id="thD">Diff</th></tr>
-    <tr><td id="tdM">Matches</td><td id="gM">-</td><td id="qM">-</td><td id="dM" style="color:#66bb6a">-</td></tr>
-    <tr><td id="tdS">Score</td><td id="gS">-</td><td id="qS">-</td><td id="dS">-</td></tr>
-    <tr><td id="tdT">Time</td><td id="gT">-</td><td id="qT">-</td><td>-</td></tr>
+    <tr><th></th><th>Greedy</th><th id="thQ"></th><th id="thD"></th></tr>
+    <tr><td id="tdM"></td><td id="gM">-</td><td id="qM">-</td><td id="dM" style="color:#66bb6a">-</td></tr>
+    <tr><td id="tdS"></td><td id="gS">-</td><td id="qS">-</td><td id="dS">-</td></tr>
+    <tr><td id="tdT"></td><td id="gT">-</td><td id="qT">-</td><td>-</td></tr>
   </table>
 </div>
 
@@ -145,179 +85,240 @@ footer a{color:#4fc3f7;text-decoration:none;}
 </div>
 
 <script>
-const T={
-  ja:{headerSub:"プライバシー保護型 肝臓移植マッチング",labelDonors:"ドナー数",labelRecipients:"レシピエント数",btnRun:"実行",btnRunning:"計算中...",
+const L={
+  ja:{
+    headerSub:"プライバシー保護型 肝臓移植マッチング",lD:"ドナー数",lR:"レシピエント数",
     thQ:"量子",thD:"差分",tdM:"マッチ数",tdS:"スコア",tdT:"時間",footerMsg:"データは個人から出ない。病院は合意後にのみ関与。",
-    vizMatch:"適合",vizConsent:"合意",vizHospital:"病院",vizHospitalSub:"手術のみ"},
-  en:{headerSub:"Privacy-Preserving Liver Transplant Matching",labelDonors:"Donors",labelRecipients:"Recipients",btnRun:"Run",btnRunning:"Computing...",
+    steps:[
+      {label:"Step 1: 匿名鍵生成",desc:"個人のスマートフォン上でPQC鍵ペア(ML-KEM-768)を生成します。\n登録不要。病院への連絡も不要。名前すら不要です。"},
+      {label:"Step 2: 医療データ暗号化",desc:"血液型・MELDスコア・肝容積などの医療データを\n準同型暗号(FHE/CKKS)で暗号化します。\n暗号文は誰にも読めません — サーバ管理者にすら。"},
+      {label:"Step 3: 暗号化したまま適合性計算",desc:"暗号化されたデータの上でABO適合性・MELD優先度・\nグラフト重量比(GRWR)・虚血時間スコアを計算します。\nデータは一度も復号されません。"},
+      {label:"Step 4: ゼロ知識証明の生成",desc:"「この2人は医学的に適合する」を証明します。\n血液型もMELDスコアも身元も一切明かしません。\n証明は誰でも検証できますが、入力は秘匿されたままです。"},
+      {label:"Step 5: 量子アニーリングで最適マッチング",desc:"匿名のスコア行列からQUBO定式化し、\n量子アニーリング(焼きなまし法)で最大マッチングを求めます。\n貪欲法では見落とすマッチを量子が見つけます。"},
+      {label:"Step 6: 適合者への匿名通知",desc:"「適合する人がいます」と匿名で通知されます。\n相手が誰かは合意するまでわかりません。\n通知を無視しても、誰にもバレません。沈黙＝通知なし。"},
+      {label:"Step 7: 合意 → 病院が仲介",desc:"両者が合意して初めて病院が登場します。\n病院はマッチングの経緯を一切知りません。\n手術のみを担当します。"},
+    ],
+    impact:(d)=>`量子が ${d} 件多くマッチ = ${d} 人の命を救えます`,done:"完了",
+  },
+  en:{
+    headerSub:"Privacy-Preserving Liver Transplant Matching",lD:"Donors",lR:"Recipients",
     thQ:"Quantum",thD:"Diff",tdM:"Matches",tdS:"Score",tdT:"Time",footerMsg:"Data never leaves the individual. Hospital only after consent.",
-    vizMatch:"MATCH",vizConsent:"CONSENT",vizHospital:"Hospital",vizHospitalSub:"operation only"}
+    steps:[
+      {label:"Step 1: Anonymous Key Generation",desc:"Generate PQC key pair (ML-KEM-768) on the individual's device.\nNo registration. No hospital. No name required."},
+      {label:"Step 2: Encrypt Medical Data",desc:"Encrypt blood type, MELD score, liver volume with\nFully Homomorphic Encryption (FHE/CKKS).\nCiphertext is unreadable — even by the server operator."},
+      {label:"Step 3: Score on Encrypted Data",desc:"Compute ABO compatibility, MELD priority,\ngraft-to-recipient weight ratio (GRWR), ischemia time\non encrypted data. No decryption at any point."},
+      {label:"Step 4: Zero-Knowledge Proof Generation",desc:"Prove \"these two are medically compatible\"\nwithout revealing blood type, MELD, or identity.\nAnyone can verify; no one learns the inputs."},
+      {label:"Step 5: Quantum Optimal Matching",desc:"Formulate QUBO from anonymous score matrix.\nQuantum annealing finds the maximum matching.\nGreedy misses matches that quantum finds."},
+      {label:"Step 6: Anonymous Notification",desc:"\"You have a compatible match\" — sent anonymously.\nCounterpart identity hidden until mutual consent.\nIgnoring is invisible: silence = no notification."},
+      {label:"Step 7: Consent → Hospital Mediates",desc:"Hospital appears ONLY after both individuals agree.\nThe hospital knows nothing about matching.\nIt handles the operation, nothing more."},
+    ],
+    impact:(d)=>`Quantum found ${d} more matches = ${d} lives saved`,done:"Done",
+  }
 };
-let lang='ja';
+
+// SVG icons per step (compact inline)
+const ICONS_JA=[
+  // Step 1: 提供者と患者
+  `<text x="25" y="18" font-size="28" text-anchor="middle">🧑</text><text x="25" y="68" text-anchor="middle" fill="#1565c0" font-size="11" font-weight="bold">提供者</text>
+   <text x="50" y="40" font-size="14" text-anchor="middle">📱</text>
+   <text x="75" y="18" font-size="28" text-anchor="middle">🧑</text><text x="75" y="68" text-anchor="middle" fill="#e65100" font-size="11" font-weight="bold">患者</text>`,
+  // Step 2: 暗号化
+  `<text x="50" y="30" font-size="32" text-anchor="middle">🔒</text><text x="50" y="55" text-anchor="middle" fill="#2e7d32" font-size="11" font-weight="bold">暗号化</text>`,
+  // Step 3: plat (FHEスコア)
+  `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#1565c0" font-size="14" font-weight="bold">plat</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">FHEスコア計算</text>`,
+  // Step 4: argo (ZKP証明)
+  `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">argo</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">ゼロ知識証明</text><text x="88" y="18" font-size="16">✓</text>`,
+  // Step 5: 量子マッチング
+  `<rect x="5" y="8" width="90" height="54" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/><text x="50" y="30" text-anchor="middle" fill="#7b1fa2" font-size="13" font-weight="bold">Quantum</text><text x="50" y="48" text-anchor="middle" fill="#546e7a" font-size="10">量子最適化</text>`,
+  // Step 6: 匿名通知
+  `<text x="25" y="28" font-size="24" text-anchor="middle">📱</text><text x="25" y="52" text-anchor="middle" fill="#2e7d32" font-size="16" font-weight="bold">❗</text>
+   <text x="50" y="40" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="bold">適合</text>
+   <text x="75" y="28" font-size="24" text-anchor="middle">📱</text><text x="75" y="52" text-anchor="middle" fill="#2e7d32" font-size="16" font-weight="bold">❗</text>`,
+  // Step 7: 合意→病院
+  `<text x="25" y="20" font-size="20" text-anchor="middle">🤝</text><text x="50" y="22" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="bold">合意</text>
+   <text x="75" y="20" font-size="14" text-anchor="middle">↓</text>
+   <rect x="20" y="42" width="60" height="28" rx="5" fill="#f5f5f5" stroke="#90a4ae" stroke-width="1" stroke-dasharray="4,2"/>
+   <text x="50" y="55" text-anchor="middle" fill="#90a4ae" font-size="9">🏥 病院（手術のみ）</text>`,
+];
+const ICONS_EN=[
+  `<text x="25" y="18" font-size="28" text-anchor="middle">🧑</text><text x="25" y="68" text-anchor="middle" fill="#1565c0" font-size="10" font-weight="bold">Donor</text>
+   <text x="50" y="40" font-size="14" text-anchor="middle">📱</text>
+   <text x="75" y="18" font-size="28" text-anchor="middle">🧑</text><text x="75" y="68" text-anchor="middle" fill="#e65100" font-size="10" font-weight="bold">Patient</text>`,
+  `<text x="50" y="30" font-size="32" text-anchor="middle">🔒</text><text x="50" y="55" text-anchor="middle" fill="#2e7d32" font-size="11" font-weight="bold">Encrypt</text>`,
+  `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#1565c0" font-size="14" font-weight="bold">plat</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">FHE Scoring</text>`,
+  `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">argo</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">ZK Proof</text><text x="88" y="18" font-size="16">✓</text>`,
+  `<rect x="5" y="8" width="90" height="54" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/><text x="50" y="30" text-anchor="middle" fill="#7b1fa2" font-size="13" font-weight="bold">Quantum</text><text x="50" y="48" text-anchor="middle" fill="#546e7a" font-size="10">Optimal Match</text>`,
+  `<text x="25" y="28" font-size="24" text-anchor="middle">📱</text><text x="25" y="52" text-anchor="middle" fill="#2e7d32" font-size="16" font-weight="bold">❗</text>
+   <text x="50" y="40" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="bold">Match</text>
+   <text x="75" y="28" font-size="24" text-anchor="middle">📱</text><text x="75" y="52" text-anchor="middle" fill="#2e7d32" font-size="16" font-weight="bold">❗</text>`,
+  `<text x="25" y="20" font-size="20" text-anchor="middle">🤝</text><text x="50" y="22" text-anchor="middle" fill="#2e7d32" font-size="10" font-weight="bold">Consent</text>
+   <text x="75" y="20" font-size="14" text-anchor="middle">↓</text>
+   <rect x="20" y="42" width="60" height="28" rx="5" fill="#f5f5f5" stroke="#90a4ae" stroke-width="1" stroke-dasharray="4,2"/>
+   <text x="50" y="55" text-anchor="middle" fill="#90a4ae" font-size="9">🏥 Hospital only</text>`,
+];
+
+let lang='ja',currentStep=0,worker=null,pendingResolve=null,workerData={};
 function setLang(l){
   lang=l;
   document.getElementById('langEn').classList.toggle('active',l==='en');
   document.getElementById('langJa').classList.toggle('active',l==='ja');
-  const t=T[l];
+  const t=L[l];
   document.getElementById('headerSub').textContent=t.headerSub;
-  document.querySelectorAll('[data-i18n]').forEach(el=>{const k=el.getAttribute('data-i18n');if(t[k])el.textContent=t[k];});
-  ['thQ','thD','tdM','tdS','tdT','footerMsg'].forEach(k=>{const el=document.getElementById(k);if(el)el.textContent=t[k];});
-  document.getElementById('vMtxt').textContent=t.vizMatch;
-  document.getElementById('vCtxt').textContent=t.vizConsent;
-  document.getElementById('vHtxt').textContent=t.vizHospital;
-  document.getElementById('vHsub').textContent=t.vizHospitalSub;
+  document.getElementById('lD').textContent=t.lD;document.getElementById('lR').textContent=t.lR;
+  document.getElementById('lSw').textContent=l==='ja'?'計算回数':'Iterations';
+  ['thQ','thD','tdM','tdS','tdT','footerMsg'].forEach(k=>{const el=document.getElementById(k);if(el&&t[k])el.textContent=t[k];});
+  updateNextBtn();
 }
 
-const logEl=document.getElementById('log');
-function log(cls,text){const d=document.createElement('div');d.className='line '+cls;d.textContent=text;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
-function logHtml(cls,html){const d=document.createElement('div');d.className='line '+cls;d.innerHTML=html;logEl.appendChild(d);logEl.scrollTop=logEl.scrollHeight;}
-function vizOn(id){document.getElementById(id).classList.remove('off');document.getElementById(id).classList.add('on');}
-function vizReset(){document.querySelectorAll('.viz-node').forEach(n=>{n.classList.add('off');n.classList.remove('on');});}
+function updateNextBtn(){
+  const btn=document.getElementById('nextBtn');
+  const t=L[lang];
+  if(currentStep>=7){btn.textContent='✓ '+t.done;btn.disabled=true;btn.classList.add('done-btn');return;}
+  btn.classList.remove('done-btn');btn.disabled=false;
+  btn.textContent='▶ '+t.steps[currentStep].label;
+}
 
-let worker=null;
-function run(){
+function addCard(stepIdx,logLines){
+  const t=L[lang].steps[stepIdx];
+  const card=document.createElement('div');
+  card.className='card active';card.id='card'+stepIdx;
+
+  // Left side
+  const left=document.createElement('div');left.className='card-left';
+  const desc=document.createElement('div');desc.className='desc';desc.textContent=t.desc;left.appendChild(desc);
+  const label=document.createElement('div');label.className='step-label';label.textContent=t.label;left.appendChild(label);
+  logLines.forEach(([cls,txt])=>{const d=document.createElement('div');d.className=cls;if(cls==='privacy-wrap')d.innerHTML=txt;else d.textContent=txt;left.appendChild(d);});
+
+  // Right side (icon)
+  const viz=document.createElement('div');viz.className='card-viz';
+  const icons = lang==='ja' ? ICONS_JA : ICONS_EN;
+  viz.innerHTML=`<svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg">${icons[stepIdx]}</svg>`;
+
+  card.appendChild(left);card.appendChild(viz);
+  document.getElementById('cards').appendChild(card);
+
+  // Mark previous card as done
+  const prev=document.getElementById('card'+(stepIdx-1));
+  if(prev){prev.classList.remove('active');prev.classList.add('done');}
+
+  card.scrollIntoView({behavior:'smooth',block:'end'});
+}
+
+function initWorker(){
   const nd=+document.getElementById('nDonors').value,nr=+document.getElementById('nRecipients').value,sw=+document.getElementById('nSweeps').value;
-  const btn=document.getElementById('runBtn');
-  btn.classList.add('running');btn.textContent=T[lang].btnRunning;
-  logEl.innerHTML='';vizReset();
-  document.getElementById('resultsSection').classList.add('hidden');
-
-  log('header','=== qmed: Privacy-Preserving Liver Transplant Matching ===');
-  log('dim',`${new Date().toISOString()}`);
-  log('','');
-
-  if(worker)worker.terminate();
+  if(worker)worker.terminate();workerData={};
   worker=new Worker('worker.js');
-
   worker.onmessage=function(e){
-    const d=e.data;
-    switch(d.type){
-      case 'keys':
-        log('step-label','[Step 1] Anonymous Key Generation (hyde + TPM / ML-KEM-768)');
-        vizOn('vP');
-        d.keys.forEach(k=>{
-          log('data',`  ${k.id}`);
-          log('hex',`    key: ${k.keyHex.substring(0,48)}...`);
-        });
-        if(d.total>d.keys.length) log('dim',`  ... +${d.total-d.keys.length} more keys`);
-        logHtml('',`  <span class="privacy">PRIVACY: keys generated locally on device - never transmitted</span>`);
-        log('','');
-        break;
-
-      case 'encrypted':
-        log('step-label','[Step 2] Encrypt Medical Data (plat / FHE-CKKS)');
-        vizOn('vE');
-        d.samples.forEach(s=>{
-          log('data',`  ${s.id}:`);
-          log('data',`    plaintext:  ${JSON.stringify(s.plain)}`);
-          log('hex',`    ciphertext: ${s.cipher.substring(0,56)}...`);
-        });
-        log('result',`  ${d.totalRecords} records encrypted`);
-        logHtml('',`  <span class="privacy">PRIVACY: ciphertext only - no party can read contents</span>`);
-        log('','');
-        break;
-
-      case 'scored':
-        log('step-label','[Step 3] Compatibility Scoring on Ciphertext (plat / FHE)');
-        vizOn('vS');
-        log('data',`  Score matrix: ${Math.sqrt(d.totalPairs)}x${Math.sqrt(d.totalPairs)} = ${d.totalPairs} pairs evaluated`);
-        log('result',`  Compatible pairs: ${d.nCompat} / ${d.totalPairs} (${(d.nCompat/d.totalPairs*100).toFixed(1)}%)`);
-        log('data',`  Computed in ${d.scoreTime.toFixed(1)}ms`);
-        if(d.scoreSamples.length){
-          log('dim','  Sample scores (encrypted):');
-          d.scoreSamples.forEach(s=>log('data',`    ${s.donor} -> ${s.recip}: ${s.score}`));
-        }
-        logHtml('',`  <span class="privacy">PRIVACY: scores computed on encrypted data - no decryption</span>`);
-        log('','');
-        break;
-
-      case 'proofs':
-        log('step-label','[Step 4] ZKP Proof Generation (argo)');
-        vizOn('vZ');
-        d.proofSamples.forEach(p=>{
-          log('data',`  ${p.donor} <-> ${p.recip}: compatible=${p.compatible} bucket=${p.bucket}`);
-          log('hex',`    proof: ${p.proofHex}`);
-          log('dim',`    (${p.proofBytes} bytes - verifiable by anyone, reveals nothing about inputs)`);
-        });
-        log('result',`  ${d.proofCount} ZKP proofs generated`);
-        logHtml('',`  <span class="privacy">PRIVACY: proves compatibility without revealing blood type, MELD, identity</span>`);
-        log('','');
-        break;
-
-      case 'greedy_done':
-        log('step-label','[Step 5] Optimal Matching');
-        log('data',`  Greedy (baseline): ${d.matches} matches, score=${d.score.toFixed(2)}, time=${d.time.toFixed(1)}ms`);
-        log('','  Quantum Annealing (QUBO) starting...');
-        vizOn('vQ');
-        break;
-
-      case 'sa_progress':
-        document.getElementById('vQprog').textContent=`${d.pct}% T=${d.temp}`;
-        const bar='#'.repeat(Math.floor(d.pct/2.5))+'.'.repeat(40-Math.floor(d.pct/2.5));
-        // Update last line or add
-        const lines=logEl.querySelectorAll('.line');
-        const last=lines[lines.length-1];
-        if(last && last.dataset.progress){
-          last.textContent=`  SA [${bar}] ${d.pct}% sweep=${d.sweep}/${d.total} E=${d.energy} matches=${d.currentMatches}`;
-        } else {
-          const div=document.createElement('div');
-          div.className='line warn';div.dataset.progress='1';
-          div.textContent=`  SA [${bar}] ${d.pct}% sweep=${d.sweep}/${d.total} E=${d.energy} matches=${d.currentMatches}`;
-          logEl.appendChild(div);
-        }
-        logEl.scrollTop=logEl.scrollHeight;
-        break;
-
-      case 'done':
-        document.getElementById('vQprog').textContent='DONE';
-        log('result',`  Quantum: ${d.quantumMatches} matches, score=${d.quantumScore.toFixed(2)}, time=${d.quantumTime.toFixed(0)}ms`);
-        const diff=d.diff;
-        if(diff>0) log('warn',`  >>> Quantum found +${diff} more matches than greedy <<<`);
-        if(diff>0) log('warn',`  >>> In liver transplant: +${diff} matches = +${diff} lives saved <<<`);
-        logHtml('',`  <span class="privacy">PRIVACY: matching uses anonymous indices only</span>`);
-        log('','');
-
-        log('step-label','[Step 6] Notification to Matched Individuals');
-        vizOn('vN');
-        d.matchDetails.slice(0,8).forEach(m=>{
-          log('data',`  ${m.donor} <-> ${m.recip}  score=${m.score}`);
-        });
-        if(d.matchDetails.length>8)log('dim',`  ... +${d.matchDetails.length-8} more`);
-        logHtml('',`  <span class="privacy">PRIVACY: refusal is invisible - silence indistinguishable from no notification</span>`);
-        log('','');
-
-        log('step-label','[Step 7] Mutual Consent -> Hospital Mediates Operation');
-        vizOn('vH');
-        log('data','  Both individuals consent via hyde-encrypted channel');
-        log('data','  Hospital receives: "perform transplant for these two individuals"');
-        logHtml('',`  <span class="privacy">PRIVACY: hospital knows nothing about how the match was found</span>`);
-        log('','');
-
-        log('header','=== COMPLETE ===');
-        log('result',`  Greedy: ${d.greedyMatches} matches | Quantum: ${d.quantumMatches} matches | Diff: +${Math.max(0,diff)}`);
-        log('dim',`  Brute force for this problem: ${Math.sqrt(d.nCompat).toFixed(0)}! combinations = impossible`);
-
-        // Fill results table
-        document.getElementById('resultsSection').classList.remove('hidden');
-        document.getElementById('gM').textContent=d.greedyMatches;
-        document.getElementById('qM').textContent=d.quantumMatches;
-        document.getElementById('dM').textContent=diff>=0?`+${diff}`:diff;
-        document.getElementById('gS').textContent=d.greedyScore.toFixed(2);
-        document.getElementById('qS').textContent=d.quantumScore.toFixed(2);
-        document.getElementById('dS').textContent=((d.quantumScore-d.greedyScore)/d.greedyScore*100).toFixed(1)+'%';
-        document.getElementById('gT').textContent=d.greedyTime.toFixed(1)+'ms';
-        document.getElementById('qT').textContent=d.quantumTime.toFixed(0)+'ms';
-
-        document.getElementById('runBtn').classList.remove('running');
-        document.getElementById('runBtn').textContent=T[lang].btnRun;
-        break;
+    const d=e.data;workerData[d.type]=d;
+    if(d.type==='sa_progress'){
+      const el=document.getElementById('sa-progress');
+      if(el){const bar='█'.repeat(Math.floor(d.pct/2.5))+'░'.repeat(40-Math.floor(d.pct/2.5));el.textContent=`  [${bar}] ${d.pct}% E=${d.energy} matches=${d.currentMatches}`;}
+      return;
     }
+    if(pendingResolve){pendingResolve(d);pendingResolve=null;}
   };
-
   worker.postMessage({nd,nr,sweeps:sw,seed:42});
 }
+function waitFor(type){return new Promise(r=>{if(workerData[type])return r(workerData[type]);pendingResolve=r;});}
 
-setLang('ja');
+async function nextStep(){
+  const btn=document.getElementById('nextBtn');
+  btn.disabled=true;
+  if(currentStep===0){document.getElementById('cards').innerHTML='';document.getElementById('resultsSection').classList.add('hidden');initWorker();}
+  currentStep++;
+  await doStep(currentStep);
+  updateNextBtn();
+}
+
+async function doStep(step){
+  if(step===1){
+    const d=await waitFor('keys');
+    const lines=[];
+    d.keys.forEach(k=>{lines.push(['data',`  ${k.id}`]);lines.push(['hex',`    key: ${k.keyHex.substring(0,40)}...`]);});
+    if(d.total>d.keys.length)lines.push(['dim',`  ... +${d.total-d.keys.length} more`]);
+    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: keys generated locally - never transmitted</span>`]);
+    addCard(0,lines);
+  }
+  else if(step===2){
+    const d=await waitFor('encrypted');
+    const lines=[];
+    d.samples.forEach(s=>{
+      lines.push(['data',`  ${s.id}:`]);
+      lines.push(['data',`    plaintext:  ${JSON.stringify(s.plain)}`]);
+      lines.push(['hex',`    ciphertext: ${s.cipher.substring(0,48)}...`]);
+    });
+    lines.push(['result',`  ${d.totalRecords} records encrypted`]);
+    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: ciphertext only - unreadable by anyone</span>`]);
+    addCard(1,lines);
+  }
+  else if(step===3){
+    const d=await waitFor('scored');
+    const lines=[];
+    const n=Math.round(Math.sqrt(d.totalPairs));
+    lines.push(['data',`  ${n}x${n} = ${d.totalPairs} pairs evaluated`]);
+    lines.push(['result',`  Compatible: ${d.nCompat} / ${d.totalPairs} (${(d.nCompat/d.totalPairs*100).toFixed(1)}%) in ${d.scoreTime.toFixed(1)}ms`]);
+    d.scoreSamples.slice(0,5).forEach(s=>lines.push(['data',`    ${s.donor} -> ${s.recip}: ${s.score}`]));
+    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: computed on encrypted data - no decryption</span>`]);
+    addCard(2,lines);
+  }
+  else if(step===4){
+    const d=await waitFor('proofs');
+    const lines=[];
+    d.proofSamples.forEach(p=>{
+      lines.push(['data',`  ${p.donor} <-> ${p.recip}: ${p.bucket}`]);
+      lines.push(['hex',`    proof: ${p.proofHex}`]);
+    });
+    lines.push(['result',`  ${d.proofCount} ZKP proofs generated`]);
+    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: proves compatibility, reveals nothing about inputs</span>`]);
+    addCard(3,lines);
+  }
+  else if(step===5){
+    const gd=await waitFor('greedy_done');
+    const lines=[];
+    lines.push(['data',`  Greedy: ${gd.matches} matches (${gd.score.toFixed(2)})`]);
+    lines.push(['warn','  Quantum Annealing (QUBO) running...']);
+    // Add progress placeholder
+    addCard(4,lines);
+    const progEl=document.createElement('div');progEl.className='warn';progEl.id='sa-progress';progEl.textContent='  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%';
+    document.querySelector('#card4 .card-left').appendChild(progEl);
+
+    const d=await waitFor('done');
+    progEl.className='result';
+    progEl.textContent=`  Quantum: ${d.quantumMatches} matches (${d.quantumScore.toFixed(2)}) ${d.quantumTime.toFixed(0)}ms`;
+    if(d.diff>0){const w=document.createElement('div');w.className='warn';w.textContent=`  >>> +${d.diff} matches = +${d.diff} lives saved <<<`;document.querySelector('#card4 .card-left').appendChild(w);}
+    // Results table
+    document.getElementById('resultsSection').classList.remove('hidden');
+    document.getElementById('gM').textContent=d.greedyMatches;document.getElementById('qM').textContent=d.quantumMatches;
+    document.getElementById('dM').textContent=d.diff>=0?`+${d.diff}`:d.diff;
+    document.getElementById('gS').textContent=d.greedyScore.toFixed(2);document.getElementById('qS').textContent=d.quantumScore.toFixed(2);
+    document.getElementById('dS').textContent=((d.quantumScore-d.greedyScore)/d.greedyScore*100).toFixed(1)+'%';
+    document.getElementById('gT').textContent=d.greedyTime.toFixed(1)+'ms';document.getElementById('qT').textContent=d.quantumTime.toFixed(0)+'ms';
+  }
+  else if(step===6){
+    const d=workerData['done'];
+    const lines=[];
+    d.matchDetails.slice(0,6).forEach(m=>lines.push(['data',`  ${m.donor} ↔ ${m.recip}  score=${m.score}`]));
+    if(d.matchDetails.length>6)lines.push(['dim',`  +${d.matchDetails.length-6} more`]);
+    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: refusal is invisible — silence = no notification</span>`]);
+    addCard(5,lines);
+  }
+  else if(step===7){
+    const lines=[];
+    lines.push(['data','  Consent via hyde-encrypted channel']);
+    lines.push(['data','  Hospital: operation only — knows nothing about matching']);
+    lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: hospital sees nothing about how match was found</span>`]);
+    addCard(6,lines);
+    // Mark complete
+    const d=workerData['done'];
+    const complete=document.createElement('div');
+    complete.className='card done';complete.style.cssText='padding:16px;text-align:center;border-left-color:#66bb6a;';
+    complete.innerHTML=`<div class="result" style="font-size:16px;">✓ Greedy: ${d.greedyMatches} | Quantum: ${d.quantumMatches} | <span style="color:#ffa726;">+${Math.max(0,d.diff)} lives</span></div>`;
+    document.getElementById('cards').appendChild(complete);
+    complete.scrollIntoView({behavior:'smooth',block:'end'});
+  }
+}
+
+currentStep=0;setLang('ja');
 </script>
 </body>
 </html>
