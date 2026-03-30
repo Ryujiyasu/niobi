@@ -6,5 +6,10 @@ description = "Privacy-preserving liver transplant matching via FHE"
 license = "MIT"
 
 [dependencies]
+plat = { path = "../plat/crates/plat" }
+plat-core = { path = "../plat/crates/plat-core" }
+argo = { path = "../argo/crates/argo" }
+argo-core = { path = "../argo/crates/argo-core" }
+tfhe = { version = "1.5", features = ["boolean", "shortint", "integer"] }
 
 [dev-dependencies]
