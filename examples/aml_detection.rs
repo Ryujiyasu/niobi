@@ -6,7 +6,7 @@
 //! But sharing customer data across banks violates privacy laws.
 //! Result: $2 trillion laundered annually, compliance costs $274B.
 //!
-//! With qmed: each bank encrypts customer transaction patterns
+//! With niobi: each bank encrypts customer transaction patterns
 //! via hyde. plat (FHE) computes risk scores across banks without
 //! exposing any customer's data. argo proves "this transaction is
 //! clean" or flags it — without revealing account details.
@@ -51,7 +51,7 @@ struct AmlProof {
 }
 
 fn main() {
-    println!("=== qmed Example: Anti-Money Laundering Detection ===\n");
+    println!("=== niobi Example: Anti-Money Laundering Detection ===\n");
 
     // Scenario: international transfer touches 3 banks
     let patterns = vec![

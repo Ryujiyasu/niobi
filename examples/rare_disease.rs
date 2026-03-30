@@ -9,7 +9,7 @@
 //! Patients can't find others with the same condition.
 //! Treatments can't be developed without sufficient data.
 //!
-//! With qmed: every rare disease patient's encrypted profile enters
+//! With niobi: every rare disease patient's encrypted profile enters
 //! the global pool. Researchers publish study criteria. argo proves
 //! "N patients matching criteria exist in countries X, Y, Z" without
 //! revealing who they are. Patients are notified and choose to
@@ -71,7 +71,7 @@ fn check_eligibility(patient: &RarePatient, criteria: &StudyCriteria) -> bool {
 }
 
 fn main() {
-    println!("=== qmed Example: Rare Disease Patient Network ===\n");
+    println!("=== niobi Example: Rare Disease Patient Network ===\n");
 
     // Scenario: Niemann-Pick disease type C (NPC)
     // Estimated worldwide prevalence: ~1 in 120,000
@@ -150,7 +150,7 @@ fn main() {
     println!("  2. Patient decides: participate or ignore");
     println!("  3. If ignore: no one knows they were notified");
     println!("  4. If participate: identity revealed ONLY to study team");
-    println!("\nWithout qmed: these 3 patients would never find each other.");
+    println!("\nWithout niobi: these 3 patients would never find each other.");
     println!("Their hospitals are in different countries, different languages,");
     println!("different privacy regimes. The study would never happen.");
 }

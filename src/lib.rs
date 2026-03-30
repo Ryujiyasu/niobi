@@ -1,4 +1,4 @@
-//! qmed: Privacy-preserving liver transplant matching
+//! niobi: Privacy-preserving liver transplant matching
 //!
 //! Combines Hyde (encrypted data distribution), PLAT (FHE computation),
 //! and Argo (optimal matching) to enable multi-hospital organ matching

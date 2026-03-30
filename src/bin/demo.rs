@@ -1,4 +1,4 @@
-//! qmed End-to-End Demo (Backend / Terminal)
+//! niobi End-to-End Demo (Backend / Terminal)
 //!
 //! Shows real intermediate data: ciphertext hex, ZKP proof bytes,
 //! SA progress with temperature/energy. Designed to be screen-recorded
@@ -9,9 +9,9 @@
 //!   cargo run --release --bin demo -- --size 50
 //!   cargo run --release --bin demo -- --benchmark
 
-use qmed::annealing::{self, ComparisonResult};
-use qmed::fhe_scoring::TfheScoring;
-use qmed::zkp_compat;
+use niobi::annealing::{self, ComparisonResult};
+use niobi::fhe_scoring::TfheScoring;
+use niobi::zkp_compat;
 use plat_core::FheBackend;
 
 fn main() {
@@ -36,7 +36,7 @@ fn to_hex(bytes: &[u8]) -> String {
 
 fn run_demo(n: usize) {
     let ts = chrono_now();
-    println!("=== qmed: Privacy-Preserving Liver Transplant Matching ===");
+    println!("=== niobi: Privacy-Preserving Liver Transplant Matching ===");
     println!("{}", ts);
     println!();
 
@@ -212,7 +212,7 @@ fn run_demo(n: usize) {
 }
 
 fn run_benchmark() {
-    println!("=== qmed: Scale Benchmark ===\n");
+    println!("=== niobi: Scale Benchmark ===\n");
     let sizes = [5, 10, 20, 30, 50, 75, 100, 150, 200];
     let mut results: Vec<ComparisonResult> = Vec::new();
     for &n in &sizes {

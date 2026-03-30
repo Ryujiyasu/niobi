@@ -1,5 +1,5 @@
 [package]
-name = "qmed"
+name = "niobi"
 version = "0.1.0"
 edition = "2021"
 description = "Privacy-preserving liver transplant matching via FHE"

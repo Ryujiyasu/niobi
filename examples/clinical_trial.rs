@@ -9,7 +9,7 @@
 //! agreements that take months to negotiate. Patients with rare
 //! conditions never find matching trials.
 //!
-//! With qmed: every patient's encrypted profile is in the global pool.
+//! With niobi: every patient's encrypted profile is in the global pool.
 //! Pharma companies publish trial criteria. argo proves "this patient
 //! matches trial criteria" without revealing the patient's condition.
 //! Quantum optimizer assigns patients to trials maximizing statistical
@@ -18,7 +18,7 @@
 //! The patient decides whether to participate. The pharma company
 //! never sees the patient's data until consent is given.
 
-use qmed::scoring::BloodType;
+use niobi::scoring::BloodType;
 
 /// Patient profile (encrypted via hyde in production).
 struct PatientProfile {
@@ -87,7 +87,7 @@ fn trial_match_score(patient: &PatientProfile, trial: &TrialCriteria) -> f64 {
 }
 
 fn main() {
-    println!("=== qmed Example: Clinical Trial Matching ===\n");
+    println!("=== niobi Example: Clinical Trial Matching ===\n");
 
     let patients = vec![
         PatientProfile {

@@ -5,7 +5,7 @@
 //! their CO2 data — it reveals production volume, efficiency,
 //! and competitive position. Result: Scope 3 is guesswork.
 //!
-//! With qmed: each supplier encrypts their emission data via hyde.
+//! With niobi: each supplier encrypts their emission data via hyde.
 //! plat (FHE) sums the encrypted values — the total is correct
 //! but no individual supplier's data is revealed.
 //! argo proves "this data has not been tampered with" (anti-greenwash).
@@ -41,7 +41,7 @@ fn compute_scope3(suppliers: &[SupplierEmission]) -> f64 {
 }
 
 fn main() {
-    println!("=== qmed Example: Scope 3 Emission Calculation ===\n");
+    println!("=== niobi Example: Scope 3 Emission Calculation ===\n");
 
     let suppliers = vec![
         SupplierEmission {

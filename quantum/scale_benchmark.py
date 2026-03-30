@@ -169,7 +169,7 @@ def run_benchmark(n, seed=42):
 
 
 if __name__ == "__main__":
-    print("=== qmed: Quantum Scale Benchmark ===")
+    print("=== niobi: Quantum Scale Benchmark ===")
     print("Liver transplant matching: greedy vs quantum annealing\n")
 
     results = []

@@ -1,5 +1,5 @@
 """
-Quantum Key Distribution (BB84) simulation for qmed.
+Quantum Key Distribution (BB84) simulation for niobi.
 
 Simulates quantum-safe key exchange between hospitals.
 The generated shared key is used to establish FHE parameter agreement
@@ -74,7 +74,7 @@ def bb84_key_exchange(n_bits: int = 256, seed: int = 42) -> dict:
 
 
 if __name__ == "__main__":
-    print("=== qmed: BB84 QKD Simulation ===")
+    print("=== niobi: BB84 QKD Simulation ===")
     print("Simulating key exchange between Hospital A and Hospital B...\n")
 
     result = bb84_key_exchange(n_bits=256)

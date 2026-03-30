@@ -319,7 +319,7 @@ def run_comparison(n_donors: int, n_recipients: int, seed: int = 42):
 
 
 if __name__ == "__main__":
-    print("=== qmed: Liver Transplant Matching - Quantum vs Classical ===")
+    print("=== niobi: Liver Transplant Matching - Quantum vs Classical ===")
 
     results = []
     # Scale up to see where brute force dies

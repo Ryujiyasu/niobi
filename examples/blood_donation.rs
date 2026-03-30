@@ -4,7 +4,7 @@
 //! No HLA matching, no infection history cross-check across centers,
 //! no optimization of which blood goes where.
 //!
-//! With qmed: every donor's encrypted profile (infection history,
+//! With niobi: every donor's encrypted profile (infection history,
 //! medication, travel history, HLA type) is in the global pool.
 //! argo proves "this blood is safe" without revealing why.
 //! Quantum optimizer matches blood to recipients with full HLA
@@ -13,7 +13,7 @@
 //! Privacy guarantee: a donor's HIV status, medication history,
 //! and travel history are NEVER exposed. Only "safe/unsafe" is proven.
 
-use qmed::scoring::BloodType;
+use niobi::scoring::BloodType;
 
 /// Blood donor profile (encrypted via hyde in production).
 struct BloodDonor {
@@ -74,7 +74,7 @@ fn compatibility_score(donor: &BloodDonor, recipient: &BloodRecipient) -> f64 {
 }
 
 fn main() {
-    println!("=== qmed Example: Blood Donation Matching ===\n");
+    println!("=== niobi Example: Blood Donation Matching ===\n");
 
     let donors = vec![
         BloodDonor {

@@ -1,4 +1,4 @@
-// Web Worker: calls real Rust code compiled to WASM
+// Web Worker: calls real Rust code compiled to WASM for niobi
 // plat (FHE), argo (ZKP), simulated annealing — all Rust.
 
 import init, { step1_keys, step2_encrypt, step3_score, step4_proofs, step5_matching } from './pkg/qmed_wasm.js';
