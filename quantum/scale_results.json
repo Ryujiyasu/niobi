@@ -88,5 +88,35 @@
       "time": 1773.43
     },
     "improvement_pct": -2.45
+  },
+  {
+    "n": 75,
+    "variables": 3516,
+    "greedy": {
+      "matches": 69,
+      "score": 47.2015,
+      "time": 0.002
+    },
+    "quantum": {
+      "matches": 70,
+      "score": 42.1558,
+      "time": 8306.99
+    },
+    "improvement_pct": -10.69
+  },
+  {
+    "n": 100,
+    "variables": 6036,
+    "greedy": {
+      "matches": 88,
+      "score": 62.0482,
+      "time": 0.0047
+    },
+    "quantum": {
+      "matches": 86,
+      "score": 52.5329,
+      "time": 20496.29
+    },
+    "improvement_pct": -15.34
   }
 ]
