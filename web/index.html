@@ -61,9 +61,9 @@ footer a{color:#4fc3f7;text-decoration:none;}
   <div class="sub" style="color:#ffa726;font-size:0.85em;">NEDO Challenge Q-2 | hyde x argo x plat x Quantum</div>
 </header>
 <div class="controls">
-  <div><label id="lD"></label><br><input type="number" id="nDonors" value="100" min="2" max="500"></div>
-  <div><label id="lR"></label><br><input type="number" id="nRecipients" value="100" min="2" max="500"></div>
-  <div><label id="lSw">計算回数</label><br><input type="number" id="nSweeps" value="5000" min="100" max="50000"></div>
+  <div><label id="lD"></label><br><input type="number" id="nDonors" value="150" min="2" max="500"></div>
+  <div><label id="lR"></label><br><input type="number" id="nRecipients" value="150" min="2" max="500"></div>
+  <div><label id="lSw">計算回数</label><br><input type="number" id="nSweeps" value="10000" min="100" max="50000"></div>
 </div>
 
 <div class="cards" id="cards"></div>
@@ -307,12 +307,6 @@ async function doStep(step){
     progEl.className='result';
     progEl.textContent=`  Quantum: ${d.quantumMatches} matches (${qs.toFixed(2)})`;
     if(d.diff>0){const w=document.createElement('div');w.className='warn';w.textContent=`  >>> +${d.diff} matches = +${d.diff} lives saved <<<`;document.querySelector('#card4 .card-left').appendChild(w);}
-    document.getElementById('resultsSection').classList.remove('hidden');
-    document.getElementById('gM').textContent=d.greedyMatches;document.getElementById('qM').textContent=d.quantumMatches;
-    document.getElementById('dM').textContent=d.diff>=0?`+${d.diff}`:d.diff;
-    document.getElementById('gS').textContent=gs.toFixed(2);document.getElementById('qS').textContent=qs.toFixed(2);
-    document.getElementById('dS').textContent=gs>0?((qs-gs)/gs*100).toFixed(1)+'%':'N/A';
-    document.getElementById('gT').textContent=d.greedyTime.toFixed(1)+'ms';document.getElementById('qT').textContent=d.quantumTime.toFixed(0)+'ms';
   }
   else if(step===6){
     const d=workerData['done'];
@@ -328,11 +322,26 @@ async function doStep(step){
     lines.push(['data','  Hospital: operation only — knows nothing about matching']);
     lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: hospital sees nothing about how match was found</span>`]);
     addCard(6,lines);
-    // Mark complete
+    // Final results
     const d=workerData['done'];
+    const gs=Number(d.greedyScore),qs=Number(d.quantumScore);
+    document.getElementById('resultsSection').classList.remove('hidden');
+    document.getElementById('gM').textContent=d.greedyMatches;
+    document.getElementById('qM').textContent=d.quantumMatches;
+    document.getElementById('dM').textContent=d.diff>=0?`+${d.diff}`:d.diff;
+    document.getElementById('gS').textContent=gs.toFixed(2);
+    document.getElementById('qS').textContent=qs.toFixed(2);
+    document.getElementById('dS').textContent=gs>0?((qs-gs)/gs*100).toFixed(1)+'%':'N/A';
+    document.getElementById('gT').textContent='-';
+    document.getElementById('qT').textContent='-';
+    // Summary card
     const complete=document.createElement('div');
-    complete.className='card done';complete.style.cssText='padding:16px;text-align:center;border-left-color:#66bb6a;';
-    complete.innerHTML=`<div class="result" style="font-size:16px;">✓ Greedy: ${d.greedyMatches} | Quantum: ${d.quantumMatches} | <span style="color:#ffa726;">+${Math.max(0,d.diff)} lives</span></div>`;
+    complete.className='card done';complete.style.cssText='padding:16px;text-align:center;border-left-color:#2e7d32;background:#0d1117;';
+    const diffText=d.diff>0?`<span style="color:#ffa726;font-size:18px;">+${d.diff} lives saved</span>`:`<span style="color:#c9d1d9;">Same matches</span>`;
+    complete.innerHTML=`<div style="color:#3fb950;font-size:16px;font-weight:bold;">✓ COMPLETE</div>
+      <div style="color:#c9d1d9;font-size:14px;margin-top:8px;">Greedy: ${d.greedyMatches} matches (${gs.toFixed(2)}) | Quantum: ${d.quantumMatches} matches (${qs.toFixed(2)})</div>
+      <div style="margin-top:8px;">${diffText}</div>
+      <div style="color:#8b949e;font-size:12px;margin-top:8px;">Brute force: ${document.getElementById('nDonors').value}! = impossible</div>`;
     document.getElementById('cards').appendChild(complete);
     complete.scrollIntoView({behavior:'smooth',block:'end'});
   }
