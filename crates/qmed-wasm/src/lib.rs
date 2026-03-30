@@ -126,7 +126,7 @@ fn gen(nd: usize, nr: usize, seed: u32) -> (Vec<(u8, f64, f64)>, Vec<(u8, f64, f
     let mut ds = Vec::new();
     for _ in 0..nd { let bt = pick(next()); let lv = (1200.0+next()*600.0).round(); let km = locs[(next()*8.0) as usize % 8]+(next()-0.5)*100.0; ds.push((bt, lv, km)); }
     let mut rs = Vec::new();
-    for _ in 0..nr { let bt = pick(next()); let m = (10.0+next()*30.0).round(); let bw = (45.0+next()*40.0).round(); let km = locs[(next()*8.0) as usize % 8]+(next()-0.5)*100.0; let wd = (next()*1500.0).round(); rs.push((bt, m, bw, km, wd)); }
+    for _ in 0..nr { let bt = pick(next()); let m = (10.0+next()*30.0).round(); let bw = (45.0+next()*40.0).round(); let km = locs[(next()*8.0) as usize % 8]+(next()-0.5)*100.0; let wd = (next()*5475.0).round(); rs.push((bt, m, bw, km, wd)); }
     (ds, rs)
 }
 
@@ -150,13 +150,17 @@ pub fn step2_encrypt(nd: usize, nr: usize, seed: u32) -> String {
     let backend = TfheScoring;
     let (ds, rs) = gen(nd, nr, seed);
     let mut samples = Vec::new();
+    let prefs = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
     for (i, &(bt, lv, km)) in ds.iter().enumerate().take(3) {
-        let plain = format!("{{\"血液型\":\"{}\",\"肝容積_mL\":{},\"地域_km\":{}}}", BT[bt as usize], lv, km.round());
+        let pref = prefs[(km.abs() as usize * 7 + i * 13) % prefs.len()];
+        let plain = format!("{{\"血液型\":\"{}\",\"肝容積_mL\":{},\"住所\":\"{}\"}}", BT[bt as usize], lv, pref);
         let cipher = backend.encrypt(plain.as_bytes()).unwrap();
         samples.push(serde_json::json!({"id": format!("提供者{:03}", i+1), "plaintext": plain, "ciphertext_hex": to_hex(&cipher[..cipher.len().min(32)])}));
     }
     for (i, &(bt, meld, bw, km, wd)) in rs.iter().enumerate().take(2) {
-        let plain = format!("{{\"血液型\":\"{}\",\"MELD\":{},\"体重_kg\":{},\"待機日数\":{}}}", BT[bt as usize], meld, bw, wd);
+        let pref = prefs[(km.abs() as usize * 11 + i * 17) % prefs.len()];
+        let years = wd as u64 / 365;
+        let plain = format!("{{\"血液型\":\"{}\",\"MELD\":{},\"体重_kg\":{},\"待機年数\":{},\"住所\":\"{}\"}}", BT[bt as usize], meld, bw, years, pref);
         let cipher = backend.encrypt(plain.as_bytes()).unwrap();
         samples.push(serde_json::json!({"id": format!("患者{:03}", i+1), "plaintext": plain, "ciphertext_hex": to_hex(&cipher[..cipher.len().min(32)])}));
     }
