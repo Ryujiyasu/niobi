@@ -118,10 +118,13 @@ const L={
 
 // SVG icons per step (compact inline)
 const ICONS_JA=[
-  // Step 1: 提供者と患者
-  `<text x="25" y="18" font-size="28" text-anchor="middle">🧑</text><text x="25" y="68" text-anchor="middle" fill="#1565c0" font-size="11" font-weight="bold">提供者</text>
-   <text x="50" y="40" font-size="14" text-anchor="middle">📱</text>
-   <text x="75" y="18" font-size="28" text-anchor="middle">🧑</text><text x="75" y="68" text-anchor="middle" fill="#e65100" font-size="11" font-weight="bold">患者</text>`,
+  // Step 1: 提供者と患者（それぞれスマホ持ち）
+  `<text x="25" y="18" font-size="24" text-anchor="middle">🧑</text>
+   <text x="25" y="48" font-size="16" text-anchor="middle">📱</text>
+   <text x="25" y="68" text-anchor="middle" fill="#1565c0" font-size="10" font-weight="bold">提供者</text>
+   <text x="75" y="18" font-size="24" text-anchor="middle">🧑</text>
+   <text x="75" y="48" font-size="16" text-anchor="middle">📱</text>
+   <text x="75" y="68" text-anchor="middle" fill="#e65100" font-size="10" font-weight="bold">患者</text>`,
   // Step 2: 暗号化
   `<text x="50" y="30" font-size="32" text-anchor="middle">🔒</text><text x="50" y="55" text-anchor="middle" fill="#2e7d32" font-size="11" font-weight="bold">暗号化</text>`,
   // Step 3: plat (FHEスコア)
@@ -141,9 +144,12 @@ const ICONS_JA=[
    <text x="50" y="55" text-anchor="middle" fill="#90a4ae" font-size="9">🏥 病院（手術のみ）</text>`,
 ];
 const ICONS_EN=[
-  `<text x="25" y="18" font-size="28" text-anchor="middle">🧑</text><text x="25" y="68" text-anchor="middle" fill="#1565c0" font-size="10" font-weight="bold">Donor</text>
-   <text x="50" y="40" font-size="14" text-anchor="middle">📱</text>
-   <text x="75" y="18" font-size="28" text-anchor="middle">🧑</text><text x="75" y="68" text-anchor="middle" fill="#e65100" font-size="10" font-weight="bold">Patient</text>`,
+  `<text x="25" y="18" font-size="24" text-anchor="middle">🧑</text>
+   <text x="25" y="48" font-size="16" text-anchor="middle">📱</text>
+   <text x="25" y="68" text-anchor="middle" fill="#1565c0" font-size="10" font-weight="bold">Donor</text>
+   <text x="75" y="18" font-size="24" text-anchor="middle">🧑</text>
+   <text x="75" y="48" font-size="16" text-anchor="middle">📱</text>
+   <text x="75" y="68" text-anchor="middle" fill="#e65100" font-size="10" font-weight="bold">Patient</text>`,
   `<text x="50" y="30" font-size="32" text-anchor="middle">🔒</text><text x="50" y="55" text-anchor="middle" fill="#2e7d32" font-size="11" font-weight="bold">Encrypt</text>`,
   `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e3f2fd" stroke="#1565c0" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#1565c0" font-size="14" font-weight="bold">plat</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">FHE Scoring</text>`,
   `<rect x="10" y="10" width="80" height="50" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/><text x="50" y="33" text-anchor="middle" fill="#2e7d32" font-size="14" font-weight="bold">argo</text><text x="50" y="50" text-anchor="middle" fill="#546e7a" font-size="10">ZK Proof</text><text x="88" y="18" font-size="16">✓</text>`,
@@ -205,19 +211,21 @@ function addCard(stepIdx,logLines){
 }
 
 function initWorker(){
-  const nd=+document.getElementById('nDonors').value,nr=+document.getElementById('nRecipients').value,sw=+document.getElementById('nSweeps').value;
   if(worker)worker.terminate();workerData={};
-  worker=new Worker('worker.js');
+  worker=new Worker('worker.js', {type:'module'});
   worker.onmessage=function(e){
     const d=e.data;workerData[d.type]=d;
     if(d.type==='sa_progress'){
       const el=document.getElementById('sa-progress');
-      if(el){const bar='█'.repeat(Math.floor(d.pct/2.5))+'░'.repeat(40-Math.floor(d.pct/2.5));el.textContent=`  [${bar}] ${d.pct}% E=${d.energy} matches=${d.currentMatches}`;}
+      if(el){el.textContent=`  [RUST/WASM] ${d.msg}`;}
       return;
     }
     if(pendingResolve){pendingResolve(d);pendingResolve=null;}
   };
-  worker.postMessage({nd,nr,sweeps:sw,seed:42});
+}
+function callWorker(step){
+  const nd=+document.getElementById('nDonors').value,nr=+document.getElementById('nRecipients').value,sw=+document.getElementById('nSweeps').value;
+  worker.postMessage({nd,nr,sweeps:sw,step});
 }
 function waitFor(type){return new Promise(r=>{if(workerData[type])return r(workerData[type]);pendingResolve=r;});}
 
@@ -232,28 +240,34 @@ async function nextStep(){
 
 async function doStep(step){
   if(step===1){
+    callWorker(1);
     const d=await waitFor('keys');
     const lines=[];
+    lines.push(['dim','  [engine: Rust/WASM → plat_core::FheBackend]']);
     d.keys.forEach(k=>{lines.push(['data',`  ${k.id}`]);lines.push(['hex',`    key: ${k.keyHex.substring(0,40)}...`]);});
     if(d.total>d.keys.length)lines.push(['dim',`  ... +${d.total-d.keys.length} more`]);
     lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: keys generated locally - never transmitted</span>`]);
     addCard(0,lines);
   }
   else if(step===2){
+    callWorker(2);
     const d=await waitFor('encrypted');
     const lines=[];
+    lines.push(['dim','  [engine: Rust/WASM → plat_core::FheBackend::encrypt()]']);
     d.samples.forEach(s=>{
       lines.push(['data',`  ${s.id}:`]);
-      lines.push(['data',`    plaintext:  ${JSON.stringify(s.plain)}`]);
-      lines.push(['hex',`    ciphertext: ${s.cipher.substring(0,48)}...`]);
+      lines.push(['data',`    plaintext:  ${s.plain}`]);
+      lines.push(['hex',`    ciphertext: ${s.cipher}...`]);
     });
     lines.push(['result',`  ${d.totalRecords} records encrypted`]);
     lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: ciphertext only - unreadable by anyone</span>`]);
     addCard(1,lines);
   }
   else if(step===3){
+    callWorker(3);
     const d=await waitFor('scored');
     const lines=[];
+    lines.push(['dim','  [engine: Rust/WASM → score() on FHE ciphertext]']);
     const n=Math.round(Math.sqrt(d.totalPairs));
     lines.push(['data',`  ${n}x${n} = ${d.totalPairs} pairs evaluated`]);
     lines.push(['result',`  Compatible: ${d.nCompat} / ${d.totalPairs} (${(d.nCompat/d.totalPairs*100).toFixed(1)}%) in ${d.scoreTime.toFixed(1)}ms`]);
@@ -262,10 +276,12 @@ async function doStep(step){
     addCard(2,lines);
   }
   else if(step===4){
+    callWorker(4);
     const d=await waitFor('proofs');
     const lines=[];
+    lines.push(['dim','  [engine: Rust/WASM → argo_core::Proof + verify_proof()]']);
     d.proofSamples.forEach(p=>{
-      lines.push(['data',`  ${p.donor} <-> ${p.recip}: ${p.bucket}`]);
+      lines.push(['data',`  ${p.donor} <-> ${p.recip}: ${p.bucket} (verified=${p.verified})`]);
       lines.push(['hex',`    proof: ${p.proofHex}`]);
     });
     lines.push(['result',`  ${d.proofCount} ZKP proofs generated`]);
@@ -273,18 +289,22 @@ async function doStep(step){
     addCard(3,lines);
   }
   else if(step===5){
-    const gd=await waitFor('greedy_done');
     const lines=[];
-    lines.push(['data',`  Greedy: ${gd.matches} matches (${gd.score.toFixed(2)})`]);
-    lines.push(['warn','  Quantum Annealing (QUBO) running...']);
-    // Add progress placeholder
+    lines.push(['warn','  Rust/WASM: greedy_match() + simulated_annealing() executing...']);
     addCard(4,lines);
-    const progEl=document.createElement('div');progEl.className='warn';progEl.id='sa-progress';progEl.textContent='  [░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 0%';
+    const progEl=document.createElement('div');progEl.className='warn';progEl.id='sa-progress';progEl.textContent='  [RUST/WASM] initializing...';
     document.querySelector('#card4 .card-left').appendChild(progEl);
 
+    callWorker(5);
     const d=await waitFor('done');
+
+    // Add greedy result
+    const greedyEl=document.createElement('div');greedyEl.className='data';
+    greedyEl.textContent=`  Greedy: ${d.greedyMatches} matches (${d.greedyScore.toFixed(2)})`;
+    document.querySelector('#card4 .card-left').appendChild(greedyEl);
+
     progEl.className='result';
-    progEl.textContent=`  Quantum: ${d.quantumMatches} matches (${d.quantumScore.toFixed(2)}) ${d.quantumTime.toFixed(0)}ms`;
+    progEl.textContent=`  Quantum: ${d.quantumMatches} matches (${d.quantumScore.toFixed(2)})`;
     if(d.diff>0){const w=document.createElement('div');w.className='warn';w.textContent=`  >>> +${d.diff} matches = +${d.diff} lives saved <<<`;document.querySelector('#card4 .card-left').appendChild(w);}
     // Results table
     document.getElementById('resultsSection').classList.remove('hidden');
