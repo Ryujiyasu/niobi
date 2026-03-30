@@ -23,20 +23,20 @@ header .sub{color:#546e7a;font-size:0.95em;margin-top:4px;}
 .card{display:grid;grid-template-columns:1fr 260px;background:white;border-left:4px solid #c5cae9;overflow:hidden;animation:cardIn 0.4s ease;border-radius:6px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
 @keyframes cardIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 @media(max-width:800px){.card{grid-template-columns:1fr;}.card-viz{display:none;}}
-.card-left{padding:16px 20px;font-family:'Courier New',monospace;font-size:14px;line-height:1.7;}
-.card-viz{background:#f0f4f8;padding:14px;display:flex;align-items:center;justify-content:center;border-left:1px solid #e0e0e0;}
+.card-left{padding:16px 20px;font-family:'Courier New',monospace;font-size:14px;line-height:1.7;background:#0d1117;color:#c9d1d9;border-radius:4px;}
+.card-viz{background:#161b22;padding:14px;display:flex;align-items:center;justify-content:center;border-left:1px solid #21262d;}
 .card-viz svg{width:100%;max-width:220px;height:auto;}
 .card.active{border-left-color:#1565c0;box-shadow:0 2px 8px rgba(21,101,192,0.15);}
 .card.done{border-left-color:#2e7d32;}
 
-.card .desc{color:#e65100;font-size:15px;margin-bottom:10px;font-weight:500;white-space:pre-line;line-height:1.6;}
-.card .step-label{color:#1565c0;font-weight:bold;font-size:15px;margin-bottom:6px;}
-.card .data{color:#37474f;font-size:13px;}
-.card .hex{color:#2e7d32;font-size:12px;}
-.card .result{color:#2e7d32;font-weight:bold;font-size:14px;}
-.card .dim{color:#90a4ae;font-size:12px;}
-.card .warn{color:#e65100;font-weight:bold;font-size:14px;}
-.card .privacy{display:inline-block;background:#e8f5e9;color:#1b5e20;padding:3px 10px;border-radius:3px;font-size:13px;margin-top:6px;border:1px solid #c8e6c9;}
+.card .desc{color:#ffa726;font-size:15px;margin-bottom:10px;font-weight:500;white-space:pre-line;line-height:1.6;padding:8px 12px;background:#1a1a2e;border-radius:4px;border-left:3px solid #ffa726;}
+.card .step-label{color:#58a6ff;font-weight:bold;font-size:15px;margin-bottom:6px;}
+.card .data{color:#c9d1d9;font-size:13px;}
+.card .hex{color:#3fb950;font-size:12px;}
+.card .result{color:#3fb950;font-weight:bold;font-size:14px;}
+.card .dim{color:#8b949e;font-size:12px;}
+.card .warn{color:#d29922;font-weight:bold;font-size:14px;}
+.card .privacy{display:inline-block;background:#0d2818;color:#3fb950;padding:3px 10px;border-radius:3px;font-size:13px;margin-top:6px;border:1px solid #238636;}
 
 .next-btn{display:block;width:100%;background:#1565c0;color:white;border:none;padding:14px;border-radius:6px;font-size:15px;font-weight:bold;cursor:pointer;margin-top:8px;transition:all 0.2s;font-family:inherit;}
 .next-btn:hover:not(:disabled){background:#1976d2;transform:translateY(-1px);}
@@ -244,7 +244,7 @@ async function doStep(step){
     const d=await waitFor('keys');
     const lines=[];
     lines.push(['dim','  [engine: Rust/WASM → plat_core::FheBackend]']);
-    d.keys.forEach(k=>{lines.push(['data',`  ${k.id}`]);lines.push(['hex',`    key: ${k.keyHex.substring(0,40)}...`]);});
+    d.keys.forEach(k=>{lines.push(['data',`  ${k.id}`]);lines.push(['hex',`    key: ${(k.key_hex||k.keyHex||'').substring(0,40)}...`]);});
     if(d.total>d.keys.length)lines.push(['dim',`  ... +${d.total-d.keys.length} more`]);
     lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: keys generated locally - never transmitted</span>`]);
     addCard(0,lines);
@@ -256,8 +256,8 @@ async function doStep(step){
     lines.push(['dim','  [engine: Rust/WASM → plat_core::FheBackend::encrypt()]']);
     d.samples.forEach(s=>{
       lines.push(['data',`  ${s.id}:`]);
-      lines.push(['data',`    plaintext:  ${s.plain}`]);
-      lines.push(['hex',`    ciphertext: ${s.cipher}...`]);
+      lines.push(['data',`    plaintext:  ${typeof s.plain==='string'?s.plain:JSON.stringify(s.plain)}`]);
+      lines.push(['hex',`    ciphertext: ${(s.cipher||s.ciphertext_hex||'').substring(0,48)}...`]);
     });
     lines.push(['result',`  ${d.totalRecords} records encrypted`]);
     lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: ciphertext only - unreadable by anyone</span>`]);
@@ -282,7 +282,7 @@ async function doStep(step){
     lines.push(['dim','  [engine: Rust/WASM → argo_core::Proof + verify_proof()]']);
     d.proofSamples.forEach(p=>{
       lines.push(['data',`  ${p.donor} <-> ${p.recip}: ${p.bucket} (verified=${p.verified})`]);
-      lines.push(['hex',`    proof: ${p.proofHex}`]);
+      lines.push(['hex',`    proof: ${(p.proofHex||p.proof_hex||'')}...`]);
     });
     lines.push(['result',`  ${d.proofCount} ZKP proofs generated`]);
     lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: proves compatibility, reveals nothing about inputs</span>`]);

@@ -1,7 +1,7 @@
 // Web Worker: calls real Rust code compiled to WASM for niobi
 // plat (FHE), argo (ZKP), simulated annealing — all Rust.
 
-import init, { step1_keys, step2_encrypt, step3_score, step4_proofs, step5_matching } from './pkg/qmed_wasm.js';
+import init, { step1_keys, step2_encrypt, step3_score, step4_proofs, step5_matching } from './pkg/niobi_wasm.js';
 
 let wasmReady = false;
 
@@ -24,7 +24,7 @@ self.onmessage = async function(e) {
     const r = JSON.parse(step2_encrypt(nd, nr));
     self.postMessage({
       type: 'encrypted',
-      samples: r.samples.map(s => ({ id: s.id, plain: s.plaintext, cipher: s.ciphertext_hex })),
+      samples: r.samples,
       totalRecords: r.total_records,
     });
   }
@@ -36,14 +36,10 @@ self.onmessage = async function(e) {
     const r = JSON.parse(step4_proofs(nd, nr));
     self.postMessage({
       type: 'proofs', proofCount: r.proof_count,
-      proofSamples: r.proof_samples.map(p => ({
-        donor: p.donor, recip: p.recip, compatible: p.compatible, verified: p.verified,
-        bucket: p.bucket, proofHex: p.proof_hex, proofBytes: p.proof_bytes,
-      })),
+      proofSamples: r.proof_samples,
     });
   }
   else if (step === 5) {
-    // SA with progress callback from Rust
     const progressCb = (msg) => {
       self.postMessage({ type: 'sa_progress', msg });
     };
