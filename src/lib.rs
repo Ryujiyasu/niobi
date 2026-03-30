@@ -1,0 +1,9 @@
+//! qmed: Privacy-preserving liver transplant matching
+//!
+//! Combines Hyde (encrypted data distribution), PLAT (FHE computation),
+//! and Argo (optimal matching) to enable multi-hospital organ matching
+//! without exposing patient data.
+
+pub mod scoring;
+pub mod matching;
+pub mod protocol;

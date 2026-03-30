@@ -1,0 +1,10 @@
+[package]
+name = "qmed"
+version = "0.1.0"
+edition = "2021"
+description = "Privacy-preserving liver transplant matching via FHE"
+license = "MIT"
+
+[dependencies]
+
+[dev-dependencies]
