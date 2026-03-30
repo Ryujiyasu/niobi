@@ -11,3 +11,4 @@ pub mod crypto;
 pub mod privacy_protocol;
 pub mod fhe_scoring;
 pub mod zkp_compat;
+pub mod exchange_chain;
