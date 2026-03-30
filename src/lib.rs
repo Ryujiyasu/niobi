@@ -7,3 +7,5 @@
 pub mod scoring;
 pub mod matching;
 pub mod protocol;
+pub mod crypto;
+pub mod privacy_protocol;
