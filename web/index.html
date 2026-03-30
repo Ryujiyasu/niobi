@@ -264,7 +264,8 @@ async function doStep(step){
     const n=Math.round(Math.sqrt(d.totalPairs));
     lines.push(['data',`  ${n} × ${n} = ${d.totalPairs} ペアを評価`]);
     lines.push(['result',`  適合ペア: ${d.nCompat} / ${d.totalPairs} (${(d.nCompat/d.totalPairs*100).toFixed(1)}%)`]);
-    d.scoreSamples.slice(0,5).forEach(s=>lines.push(['data',`    提供者${s.donor} → 患者${s.recip}: 適合度 ${s.score}`]));
+    lines.push(['dim','  ※氏名・血液型・住所は暗号化済み → 記号で表示']);
+    d.scoreSamples.slice(0,5).forEach(s=>lines.push(['data',`    ${s.donor}(暗号型:■■, 暗号住所:■■■) → ${s.recip}(暗号MELD:■■) 適合度=${s.score}`]));
     lines.push(['privacy-wrap',`<span class="privacy">暗号化データの上で計算 — 復号は一度もしない</span>`]);
     addCard(3,lines);
   }

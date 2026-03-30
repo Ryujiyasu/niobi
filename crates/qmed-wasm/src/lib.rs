@@ -151,16 +151,23 @@ pub fn step2_encrypt(nd: usize, nr: usize, seed: u32) -> String {
     let (ds, rs) = gen(nd, nr, seed);
     let mut samples = Vec::new();
     let prefs = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+    let surnames = ["田中","佐藤","鈴木","高橋","渡辺","伊藤","山本","中村","小林","加藤","吉田","山田","松本","井上","木村","林","斎藤","清水","山口","森"];
+    let firstnames_m = ["太郎","翔太","大輝","健一","和也","拓海","直樹","裕介","達也","慎一"];
+    let firstnames_f = ["花子","美咲","陽菜","結衣","愛","さくら","真由","優子","理恵","綾"];
     for (i, &(bt, lv, km)) in ds.iter().enumerate().take(3) {
         let pref = prefs[(km.abs() as usize * 7 + i * 13) % prefs.len()];
-        let plain = format!("{{\"血液型\":\"{}\",\"肝容積_mL\":{},\"住所\":\"{}\"}}", BT[bt as usize], lv, pref);
+        let surname = surnames[(km.abs() as usize * 3 + i * 7) % surnames.len()];
+        let firstname = if i % 2 == 0 { firstnames_m[(i * 3 + km.abs() as usize) % firstnames_m.len()] } else { firstnames_f[(i * 5 + km.abs() as usize) % firstnames_f.len()] };
+        let plain = format!("{{\"氏名\":\"{}{}\",\"血液型\":\"{}\",\"肝容積_mL\":{},\"住所\":\"{}\"}}", surname, firstname, BT[bt as usize], lv, pref);
         let cipher = backend.encrypt(plain.as_bytes()).unwrap();
         samples.push(serde_json::json!({"id": format!("提供者{:03}", i+1), "plaintext": plain, "ciphertext_hex": to_hex(&cipher[..cipher.len().min(32)])}));
     }
     for (i, &(bt, meld, bw, km, wd)) in rs.iter().enumerate().take(2) {
         let pref = prefs[(km.abs() as usize * 11 + i * 17) % prefs.len()];
+        let surname = surnames[(km.abs() as usize * 5 + i * 11 + 3) % surnames.len()];
+        let firstname = if i % 2 == 0 { firstnames_f[(i * 7 + km.abs() as usize) % firstnames_f.len()] } else { firstnames_m[(i * 4 + km.abs() as usize) % firstnames_m.len()] };
         let years = wd as u64 / 365;
-        let plain = format!("{{\"血液型\":\"{}\",\"MELD\":{},\"体重_kg\":{},\"待機年数\":{},\"住所\":\"{}\"}}", BT[bt as usize], meld, bw, years, pref);
+        let plain = format!("{{\"氏名\":\"{}{}\",\"血液型\":\"{}\",\"MELD\":{},\"体重_kg\":{},\"待機年数\":{},\"住所\":\"{}\"}}", surname, firstname, BT[bt as usize], meld, bw, years, pref);
         let cipher = backend.encrypt(plain.as_bytes()).unwrap();
         samples.push(serde_json::json!({"id": format!("患者{:03}", i+1), "plaintext": plain, "ciphertext_hex": to_hex(&cipher[..cipher.len().min(32)])}));
     }
@@ -180,7 +187,7 @@ pub fn step3_score(nd: usize, nr: usize, seed: u32) -> String {
             if s > 0.0 {
                 n_compat += 1;
                 if samples.len() < 8 {
-                    samples.push(serde_json::json!({"donor": format!("D{:03}", d), "recip": format!("R{:03}", r), "score": format!("{:.4}", s)}));
+                    samples.push(serde_json::json!({"donor": format!("■■■{:03}", d), "recip": format!("■■■{:03}", r), "score": format!("{:.4}", s), "donor_plain": format!("D{:03}", d), "recip_plain": format!("R{:03}", r)}));
                 }
             }
         }
