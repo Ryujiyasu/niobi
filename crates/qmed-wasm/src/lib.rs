@@ -229,8 +229,24 @@ pub fn step5_matching(nd: usize, nr: usize, sweeps: usize, progress_cb: &js_sys:
     let qa_score: f64 = qa.iter().map(|&(d, r)| scores[d][r]).sum();
     let diff = qa.len() as i64 - greedy.len() as i64;
 
+    let regions = ["北海道","東北","関東","中部","関西","中国","四国","九州"];
     let details: Vec<serde_json::Value> = qa.iter().map(|&(d, r)| {
-        serde_json::json!({"donor": format!("anon-d{:03}", d), "recip": format!("anon-r{:03}", r), "score": format!("{:.4}", scores[d][r])})
+        let dd = &ds[d];
+        let rr = &rs[r];
+        let d_region = regions[(dd.2.abs() as usize / 150) % regions.len()];
+        let r_region = regions[(rr.3.abs() as usize / 150) % regions.len()];
+        serde_json::json!({
+            "donor": format!("anon-d{:03}", d),
+            "recip": format!("anon-r{:03}", r),
+            "score": format!("{:.4}", scores[d][r]),
+            "donor_bt": BT[dd.0 as usize],
+            "donor_lv": dd.1 as u64,
+            "donor_region": d_region,
+            "recip_bt": BT[rr.0 as usize],
+            "recip_meld": rr.1 as u64,
+            "recip_bw": rr.2 as u64,
+            "recip_region": r_region,
+        })
     }).collect();
 
     serde_json::json!({

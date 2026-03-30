@@ -311,7 +311,12 @@ async function doStep(step){
   else if(step===6){
     const d=workerData['done'];
     const lines=[];
-    d.matchDetails.slice(0,6).forEach(m=>lines.push(['data',`  ${m.donor} ↔ ${m.recip}  score=${m.score}`]));
+    lines.push(['dim','  ※デモのため平文を表示。実際の運用では匿名IDのみ']);
+    d.matchDetails.slice(0,6).forEach(m=>{
+      const dl=m.donor_bt?`提供者(${m.donor_bt}型, ${m.donor_lv}mL, ${m.donor_region})`:`${m.donor}`;
+      const rl=m.recip_bt?`患者(${m.recip_bt}型, MELD${m.recip_meld}, ${m.recip_bw}kg, ${m.recip_region})`:`${m.recip}`;
+      lines.push(['data',`  ${dl} ↔ ${rl}  適合度=${m.score}`]);
+    });
     if(d.matchDetails.length>6)lines.push(['dim',`  +${d.matchDetails.length-6} more`]);
     lines.push(['privacy-wrap',`<span class="privacy">PRIVACY: refusal is invisible — silence = no notification</span>`]);
     addCard(5,lines);
