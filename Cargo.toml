@@ -8,8 +8,9 @@ license = "MIT"
 [dependencies]
 plat = { path = "../plat/crates/plat" }
 plat-core = { path = "../plat/crates/plat-core" }
+plat-mkfhe = { path = "../plat/crates/plat-mkfhe" }
 argo = { path = "../argo/crates/argo" }
 argo-core = { path = "../argo/crates/argo-core" }
-tfhe = { version = "1.5", features = ["boolean", "shortint", "integer"] }
+rand = "0.8"
 
 [dev-dependencies]

@@ -3,31 +3,31 @@
 //! These tests verify the end-to-end flow:
 //! encryption → FHE scoring → ZKP proof → matching → notification
 
-use niobi::fhe_scoring::{self, TfheScoring};
+use niobi::fhe_scoring::{self, MkFheScoring};
 use niobi::zkp_compat;
 use niobi::scoring::BloodType;
 use niobi::matching;
 use niobi::annealing;
 use niobi::privacy_protocol::{self, Individual, Role, MedicalData};
-use plat_core::FheBackend;
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 
 /// Full pipeline: encrypt → score → prove → match → verify
 #[test]
 fn test_full_pipeline_encrypt_score_prove_match() {
     let n = 10;
     let (donors, recipients) = annealing::generate_scenario(n, 42);
-    let backend = TfheScoring::new();
 
-    // Step 1-2: Encrypt medical data
-    let mut encrypted_records = Vec::new();
-    for d in &donors {
-        let record = format!("{:?}:{:.0}:{:.0}", d.blood_type, d.liver_volume, d.region_km);
-        let enc = backend.encrypt(record.as_bytes()).unwrap();
-        assert!(enc.len() > record.len()); // ciphertext includes nonce
-        let dec = backend.decrypt(&enc).unwrap();
-        assert_eq!(String::from_utf8(dec).unwrap(), record);
-        encrypted_records.push(enc);
-    }
+    // Step 1-2: MKFHE encrypt medical data (each individual has own key)
+    let ctx = MkFheScoring::new();
+    let mut rng = StdRng::seed_from_u64(42);
+    let keys: Vec<_> = (0..(n * 2) as u64).map(|i| ctx.keygen(i, &mut rng)).collect();
+
+    // Verify encryption roundtrip for a single party
+    let val = 5u64;
+    let ct = ctx.encrypt(&keys[0].public, val, &mut rng);
+    let dec = ctx.decrypt(&ct, &[&keys[0].secret]);
+    assert_eq!(dec, val);
 
     // Step 3: Build score matrix
     let scores = annealing::build_score_matrix(&donors, &recipients);
@@ -50,7 +50,6 @@ fn test_full_pipeline_encrypt_score_prove_match() {
                 );
                 assert!(result.is_ok());
                 let (stmt, proof) = result.unwrap();
-                // Verify each proof
                 assert!(zkp_compat::verify_proof(&stmt, &proof).unwrap());
                 proof_count += 1;
             }
@@ -74,56 +73,44 @@ fn test_full_pipeline_encrypt_score_prove_match() {
 fn test_privacy_no_data_leak_in_proofs() {
     let (stmt, proof) = zkp_compat::prove_compatibility(
         "anon-d001", "anon-r001",
-        0,     // O type
-        1400,  // liver volume
-        1,     // A type
-        35,    // MELD
-        70,    // body weight
-        180,   // waiting days
-        50,    // distance
-        500,   // max wait
+        0, 1400, 1, 35, 70, 180, 50, 500,
     ).unwrap();
 
     let proof_str = String::from_utf8_lossy(&proof.data);
-
-    // Proof should NOT contain plaintext medical values
     assert!(!proof_str.contains("1400"), "Liver volume leaked");
     assert!(!proof_str.contains("blood"), "Blood type string leaked");
-
-    // Proof should NOT contain real names or IDs
     assert!(!proof_str.contains("anon-d001"));
     assert!(!proof_str.contains("anon-r001"));
 
-    // Statement uses anonymous IDs only
     assert!(stmt.donor_anon_id.starts_with("anon-"));
     assert!(stmt.recipient_anon_id.starts_with("anon-"));
 }
 
-/// Verify that different keys produce incompatible encryption
+/// Verify MKFHE key isolation: one party's key cannot decrypt another's data
 #[test]
-fn test_privacy_cross_key_isolation() {
-    let key_a = [0x01u8; 32];
-    let key_b = [0x02u8; 32];
-    let backend_a = TfheScoring::with_key(&key_a);
-    let backend_b = TfheScoring::with_key(&key_b);
+fn test_mkfhe_key_isolation() {
+    let ctx = MkFheScoring::new();
+    let mut rng = StdRng::seed_from_u64(42);
 
-    let data = b"MELD:35,BloodType:O,LiverVol:1400";
-    let encrypted = backend_a.encrypt(data).unwrap();
+    let party_a = ctx.keygen(1, &mut rng);
+    let party_b = ctx.keygen(2, &mut rng);
 
-    // Hospital B cannot decrypt Hospital A's data
-    let cross_decrypt = backend_b.decrypt(&encrypted).unwrap();
-    assert_ne!(&cross_decrypt[..], &data[..],
-        "Cross-key decryption must not recover plaintext");
+    let ct_a = ctx.encrypt(&party_a.public, 5, &mut rng);
+    let ct_b = ctx.encrypt(&party_b.public, 3, &mut rng);
 
-    // Hospital A can decrypt its own data
-    let self_decrypt = backend_a.decrypt(&encrypted).unwrap();
-    assert_eq!(&self_decrypt[..], &data[..]);
+    // Cross-party sum requires both keys
+    let ct_sum = ctx.add(&ct_a, &ct_b);
+    let correct = ctx.decrypt(&ct_sum, &[&party_a.secret, &party_b.secret]);
+    assert_eq!(correct, (5 + 3) % ctx.plaintext_modulus());
+
+    // Single key gives wrong result
+    let wrong = ctx.decrypt(&ct_sum, &[&party_b.secret]);
+    assert_ne!(wrong, correct, "Single key must not decrypt cross-party ciphertext");
 }
 
 /// Edge case: all donors incompatible with all recipients
 #[test]
 fn test_edge_all_incompatible() {
-    // All donors are A, all recipients are B → ABO incompatible
     let scores = vec![
         vec![0.0, 0.0, 0.0],
         vec![0.0, 0.0, 0.0],
@@ -146,7 +133,6 @@ fn test_greedy_vs_quantum_small() {
     let sa = annealing::simulated_annealing(&qubo, 2000, 10.0, 0.001, 123);
     let sa_score: f64 = sa.pairs.iter().map(|&(d, r)| scores[d][r]).sum();
 
-    // Quantum should be at least as good as greedy for small problems
     assert!(sa_score >= greedy_score * 0.95,
         "Quantum score {} should be close to greedy {}", sa_score, greedy_score);
 }
@@ -195,46 +181,75 @@ fn test_privacy_protocol_e2e() {
 
     let (notifications, audit) = privacy_protocol::run_private_matching(&individuals);
 
-    // Should produce matches
     assert!(!notifications.is_empty(), "Should have at least one notification");
-
-    // Audit should have 7 steps
     assert_eq!(audit.len(), 7);
 
-    // No step should expose medical data
     for entry in &audit {
         assert!(!entry.data_exposed.contains("blood_type"));
         assert!(!entry.data_exposed.contains("meld_score"));
         assert!(!entry.data_exposed.contains("liver_volume"));
     }
 
-    // All notifications use anonymous IDs
     for n in &notifications {
         assert!(n.to_anon_id.starts_with("anon-"));
         assert!(n.counterpart_anon_id.starts_with("anon-"));
     }
 }
 
-/// FHE encode/decode preserves scoring accuracy
+/// MKFHE scoring with plaintext functions
 #[test]
-fn test_fhe_score_encoding_accuracy() {
-    let backend = TfheScoring::new();
-
-    let test_scores = [0.0, 0.1, 0.5, 0.853, 0.999, 1.0];
-    for &score in &test_scores {
-        let encoded = backend.encode(score);
-        let decoded = backend.decode(encoded);
-        assert!((decoded - score).abs() < 0.002,
-            "Score {}: encoded={}, decoded={}", score, encoded, decoded);
-    }
-
-    // Verify the FHE integer arithmetic matches floating-point scoring
+fn test_fhe_scoring_functions() {
     let scale = 1000u64;
-    let abo = fhe_scoring::encrypted_abo_compatibility(0, 1); // O→A: compatible
-    let meld = fhe_scoring::encrypted_meld_priority(35, scale);
-    let grwr = fhe_scoring::encrypted_grwr_score(1400, 70, scale);
-    let composite = fhe_scoring::encrypted_composite_score(abo, meld, grwr, 800, 360, scale);
+    let abo = fhe_scoring::abo_compatibility(0, 1); // O→A: compatible
+    assert_eq!(abo, 1);
 
+    let meld = fhe_scoring::meld_priority(35, scale);
+    assert!(meld > 800);
+
+    let grwr = fhe_scoring::grwr_score(1400, 70, scale);
+    assert!(grwr > 900);
+
+    // Composite in plaintext
+    let ischemia = fhe_scoring::ischemia_score(120, scale);
+    let waiting = 360u64 * scale / 500;
+    let composite = if abo == 0 || grwr == 0 {
+        0
+    } else {
+        (35 * meld + 25 * grwr + 25 * ischemia + 15 * waiting) / 100
+    };
     assert!(composite > 0, "Compatible pair should have positive score");
     assert!(composite <= scale, "Score should not exceed scale");
+}
+
+/// MKFHE cross-party composite scoring (the core innovation)
+#[test]
+fn test_mkfhe_cross_party_scoring() {
+    let ctx = MkFheScoring::new();
+    let mut rng = StdRng::seed_from_u64(42);
+    let t = ctx.plaintext_modulus();
+
+    let patient = ctx.keygen(1, &mut rng);
+    let donor = ctx.keygen(2, &mut rng);
+
+    // Patient encrypts their scores (under their own key)
+    let meld = 8u64 % t;
+    let wait = 3u64 % t;
+    let ct_meld = ctx.encrypt(&patient.public, meld, &mut rng);
+    let ct_wait = ctx.encrypt(&patient.public, wait, &mut rng);
+
+    // Donor encrypts their scores (under their own key — different!)
+    let grwr = 5u64 % t;
+    let isch = 4u64 % t;
+    let ct_grwr = ctx.encrypt(&donor.public, grwr, &mut rng);
+    let ct_isch = ctx.encrypt(&donor.public, isch, &mut rng);
+
+    // Homomorphic weighted sum across different keys
+    let ct_score = fhe_scoring::encrypted_composite_score(
+        &ctx, &ct_meld, &ct_wait, &ct_grwr, &ct_isch,
+    );
+
+    // Both parties cooperate to decrypt
+    let dec = ctx.decrypt(&ct_score, &[&patient.secret, &donor.secret]);
+    let expected = (7 * meld + 5 * grwr + 5 * isch + 3 * wait) % t;
+    assert_eq!(dec, expected, "Cross-party MKFHE scoring failed");
 }

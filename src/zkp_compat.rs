@@ -103,9 +103,9 @@ pub fn prove_compatibility(
     let scale = 1000u64;
 
     // Compute score (same logic as fhe_scoring, but in ZKP circuit)
-    let abo = fhe_scoring::encrypted_abo_compatibility(donor_blood_type, recipient_blood_type);
-    let meld = fhe_scoring::encrypted_meld_priority(recipient_meld_score, scale);
-    let grwr = fhe_scoring::encrypted_grwr_score(donor_liver_volume, recipient_body_weight, scale);
+    let abo = fhe_scoring::abo_compatibility(donor_blood_type, recipient_blood_type);
+    let meld = fhe_scoring::meld_priority(recipient_meld_score, scale);
+    let grwr = fhe_scoring::grwr_score(donor_liver_volume, recipient_body_weight, scale);
 
     let ischemia = if distance_km > 1200 {
         0
@@ -119,7 +119,13 @@ pub fn prove_compatibility(
         (recipient_waiting_days * scale / max_waiting_days).min(scale)
     };
 
-    let score = fhe_scoring::encrypted_composite_score(abo, meld, grwr, ischemia, waiting, scale);
+    // Plaintext composite score for ZKP witness computation
+    let score = if abo == 0 || grwr == 0 {
+        0
+    } else {
+        let weighted = (35 * meld + 25 * grwr + 25 * ischemia + 15 * waiting) / 100;
+        weighted.min(scale)
+    };
 
     let is_compatible = score > 0;
     let score_bucket = match score {

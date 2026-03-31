@@ -10,9 +10,10 @@
 //!   cargo run --release --bin demo -- --benchmark
 
 use niobi::annealing::{self, ComparisonResult};
-use niobi::fhe_scoring::TfheScoring;
+use niobi::fhe_scoring::MkFheScoring;
 use niobi::zkp_compat;
-use plat_core::FheBackend;
+use rand::SeedableRng;
+use rand::rngs::StdRng;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -40,54 +41,43 @@ fn run_demo(n: usize) {
     println!("{}", ts);
     println!();
 
-    // Step 1: Key generation
-    println!("[Step 1] Anonymous Key Generation (hyde + TPM / ML-KEM-768)");
+    // Step 1: Key generation (MKFHE — each individual has their own key)
+    println!("[Step 1] Anonymous Key Generation (plat-mkfhe / independent keys)");
     let t0 = std::time::Instant::now();
-    let mut keys: Vec<(String, Vec<u8>)> = Vec::new();
-    for i in 0..(n * 2) {
-        let id = if i < n {
-            format!("anon-d{:03}", i)
-        } else {
-            format!("anon-r{:03}", i - n)
-        };
-        let key: Vec<u8> = id.as_bytes().iter()
-            .enumerate()
-            .map(|(j, &b)| b.wrapping_mul((j as u8).wrapping_add(0x5A)))
-            .collect();
-        keys.push((id, key));
-    }
+    let ctx = MkFheScoring::new();
+    let mut rng = StdRng::seed_from_u64(42);
+    let mk_keys: Vec<_> = (0..(n * 2) as u64).map(|i| ctx.keygen(i, &mut rng)).collect();
     let key_time = t0.elapsed();
-    for (id, key) in keys.iter().take(4) {
-        println!("  {}", id);
-        println!("    key: {}...", to_hex(&key[..std::cmp::min(24, key.len())]));
+    for (i, kp) in mk_keys.iter().enumerate().take(4) {
+        let id = if i < n { format!("anon-d{:03}", i) } else { format!("anon-r{:03}", i - n) };
+        println!("  {} (party {})", id, kp.public.party_id);
+        println!("    key: [independent MKFHE key — never shared]");
     }
-    if keys.len() > 4 {
-        println!("  ... +{} more keys", keys.len() - 4);
+    if mk_keys.len() > 4 {
+        println!("  ... +{} more keys", mk_keys.len() - 4);
     }
-    println!("  Generated {} key pairs in {:.1}ms", keys.len(), key_time.as_secs_f64() * 1000.0);
-    println!("  PRIVACY: keys generated locally on device - never transmitted");
+    println!("  Generated {} independent MKFHE key pairs in {:.1}ms", mk_keys.len(), key_time.as_secs_f64() * 1000.0);
+    println!("  PRIVACY: each individual holds their own key — no shared secrets");
     println!();
 
-    // Step 2: Encrypt
-    println!("[Step 2] Encrypt Medical Data (plat / FHE-CKKS)");
-    let backend = TfheScoring::new();
+    // Step 2: Encrypt (each individual encrypts with their own MKFHE key)
+    println!("[Step 2] Encrypt Medical Data (plat-mkfhe / individual keys)");
     let (donors, recipients) = annealing::generate_scenario(n, 42);
     let t0 = std::time::Instant::now();
     for (i, d) in donors.iter().enumerate().take(3) {
-        let plain = format!("{{\"blood_type\":\"{:?}\",\"liver_volume\":{:.0},\"region_km\":{:.0}}}",
-            d.blood_type, d.liver_volume, d.region_km);
-        let encrypted = backend.encrypt(plain.as_bytes()).unwrap();
-        println!("  anon-d{:03}:", i);
-        println!("    plaintext:  {}", plain);
-        println!("    ciphertext: {}...", to_hex(&encrypted[..std::cmp::min(28, encrypted.len())]));
+        let meld_enc = ctx.encrypt(&mk_keys[i].public, d.blood_type as u64, &mut rng);
+        println!("  anon-d{:03} (party {}):", i, mk_keys[i].public.party_id);
+        println!("    data: blood_type={:?}, liver_volume={:.0}", d.blood_type, d.liver_volume);
+        println!("    encrypted under party {}'s independent key ({} poly coefficients)",
+            mk_keys[i].public.party_id, meld_enc.c0.coeffs.len());
     }
     for (i, r) in recipients.iter().enumerate().take(2) {
-        let plain = format!("{{\"blood_type\":\"{:?}\",\"meld\":{:.0},\"body_weight\":{:.0},\"waiting_days\":{:.0}}}",
-            r.blood_type, r.meld_score, r.body_weight, r.waiting_days);
-        let encrypted = backend.encrypt(plain.as_bytes()).unwrap();
-        println!("  anon-r{:03}:", i);
-        println!("    plaintext:  {}", plain);
-        println!("    ciphertext: {}...", to_hex(&encrypted[..std::cmp::min(28, encrypted.len())]));
+        let idx = n + i;
+        let meld_enc = ctx.encrypt(&mk_keys[idx].public, r.meld_score as u64 % ctx.plaintext_modulus(), &mut rng);
+        println!("  anon-r{:03} (party {}):", i, mk_keys[idx].public.party_id);
+        println!("    data: blood_type={:?}, meld={:.0}", r.blood_type, r.meld_score);
+        println!("    encrypted under party {}'s independent key ({} poly coefficients)",
+            mk_keys[idx].public.party_id, meld_enc.c0.coeffs.len());
     }
     let enc_time = t0.elapsed();
     println!("  {} records encrypted in {:.1}ms", n * 2, enc_time.as_secs_f64() * 1000.0);
