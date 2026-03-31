@@ -221,10 +221,37 @@ N=200で12マッチを見落とすことが実証された。
 「データが集まらない → 最適化できない」という構造的問題を包括的に解消する点が本質的に新しい。
 
 さらに、MKFHEに関しては2012年の理論提案から14年が経過しているにもかかわらず、
-**プロダクションレベルのRust実装は世界に存在しない**。
-OpenFHE（C++）はThreshold FHEのみをサポートし、MKFHEは未対応である。
-Lattigo（Go）はMultiparty FHEを実装しているがGo言語に限定される。
-TFHE-rs（Zama, Rust）はMKFHE非対応である。
+**MKFHEの実装は世界に存在しない**。
+既存FHEライブラリとの差分を以下に明確化する。
+
+**Threshold FHE（閾値FHE）とMKFHEは異なる暗号プリミティブである:**
+
+| | Threshold FHE（Lattigo等） | MKFHE（plat crate） |
+|---|---|---|
+| 鍵生成 | **全参加者が共同で**公開鍵を生成 | **各自が独立に**鍵を生成 |
+| 暗号化 | 全員が**同一の共同公開鍵**で暗号化 | 各自が**自分の独立した鍵**で暗号化 |
+| 新規参加 | **全員で鍵を再生成**（既存暗号文は無効化） | **即座に参加可能**（既存データに影響なし） |
+| セットアップ | 対話的プロトコル（全員がオンライン） | **非対話的**（オフラインで鍵生成） |
+| 暗号文構造 | 共通鍵下の標準暗号文 | 鍵ごとにコンポーネントが拡張（ciphertext extension） |
+| 鍵漏洩の影響 | 閾値超で**全データ漏洩** | **漏洩者1人分のみ** |
+
+| ライブラリ | 言語 | Threshold FHE | MKFHE | 備考 |
+|---|---|---|---|---|
+| OpenFHE | C++ | ○ | × | Threshold BGV/BFV/CKKSのみ |
+| Lattigo | Go | ○ | × | Collective key generationに基づく |
+| TFHE-rs (Zama) | Rust | × | × | 単一鍵TFHEのみ |
+| **plat** | **Rust** | — | **○** | **López-Alt et al. 2012に基づくMKFHE** |
+
+Lattigo（Go）はMultiparty FHEを実装しているが、その実体は
+collective key generation protocolに基づく**Threshold FHE**であり、
+López-Alt et al. 2012で定義された**MKFHE（異なる独立鍵間の演算）とは理論的に異なる**。
+Threshold FHEでは全参加者が共同鍵生成プロトコルに参加する必要があり、
+80億人規模のプールでは共同鍵生成自体が成立しない。
+また新たな参加者が加わるたびに全員で鍵を再生成する必要がある。
+
+MKFHEが持つciphertext extension（暗号文を新しい鍵セットに拡張する操作）は
+Threshold FHEには存在しない操作であり、platの`extend_to()`/`union_parties()`として実装した。
+この操作により、各個人が独立に鍵を生成し、事前の調整なくプールに参加できる。
 
 本研究のplat crateは、MKFHEのRust実装として世界初であり、
 臓器マッチングという実用ユースケースとともに実証した点に独自性がある。
