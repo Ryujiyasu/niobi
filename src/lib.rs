@@ -13,3 +13,4 @@ pub mod fhe_scoring;
 pub mod zkp_compat;
 pub mod exchange_chain;
 pub mod annealing;
+pub mod multi_organ;
