@@ -1,9 +1,99 @@
 //! MKFHE end-to-end benchmark: keygen, encrypt, score, decrypt.
 
 use niobi::fhe_scoring::MkFheScoring;
+use plat_core;
+use plat_mkfhe;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use std::time::Instant;
+
+fn bench_params(label: &str, params_fn: fn() -> plat_core::params::Params) {
+    use plat_core::ntt::NttTables;
+    use plat_core::params::Params;
+
+    let params = params_fn();
+    let ntt = NttTables::new(&params);
+
+    // Simulate the key operations at this parameter level using raw plat-core
+    let mut rng = StdRng::seed_from_u64(99);
+
+    let iterations = 20;
+    let t0 = Instant::now();
+    for i in 0..iterations {
+        let _ = plat_mkfhe::mk_keys::mk_keygen(i as u64, &params, &ntt, &mut rng);
+    }
+    let keygen_us = t0.elapsed().as_micros() as f64 / iterations as f64;
+
+    let kp = plat_mkfhe::mk_keys::mk_keygen(0, &params, &ntt, &mut rng);
+    let t0 = Instant::now();
+    for _ in 0..iterations {
+        let _ = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &kp.public, 7, &mut rng);
+    }
+    let encrypt_us = t0.elapsed().as_micros() as f64 / iterations as f64;
+
+    let kp2 = plat_mkfhe::mk_keys::mk_keygen(1, &params, &ntt, &mut rng);
+    let ct_a = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &kp.public, 5, &mut rng);
+    let ct_b = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &kp2.public, 3, &mut rng);
+
+    let t0 = Instant::now();
+    for _ in 0..iterations {
+        let _ = plat_mkfhe::mk_add(&params, &ct_a, &ct_b);
+    }
+    let add_us = t0.elapsed().as_micros() as f64 / iterations as f64;
+
+    let t0 = Instant::now();
+    for _ in 0..iterations {
+        let _ = plat_mkfhe::mk_scalar_mul(&params, &ct_a, 35);
+    }
+    let smul_us = t0.elapsed().as_micros() as f64 / iterations as f64;
+
+    let ct_m = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &kp.public, 8, &mut rng);
+    let ct_w = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &kp.public, 3, &mut rng);
+    let ct_g = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &kp2.public, 5, &mut rng);
+    let ct_i = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &kp2.public, 4, &mut rng);
+
+    let t0 = Instant::now();
+    for _ in 0..iterations {
+        let s1 = plat_mkfhe::mk_scalar_mul(&params, &ct_m, 35);
+        let s2 = plat_mkfhe::mk_scalar_mul(&params, &ct_g, 25);
+        let s3 = plat_mkfhe::mk_scalar_mul(&params, &ct_i, 25);
+        let s4 = plat_mkfhe::mk_scalar_mul(&params, &ct_w, 15);
+        let a1 = plat_mkfhe::mk_add(&params, &s1, &s2);
+        let a2 = plat_mkfhe::mk_add(&params, &a1, &s3);
+        let _ = plat_mkfhe::mk_add(&params, &a2, &s4);
+    }
+    let score_us = t0.elapsed().as_micros() as f64 / iterations as f64;
+
+    let t0 = Instant::now();
+    let pipeline_iters = 10;
+    for i in 0..pipeline_iters {
+        let p = plat_mkfhe::mk_keys::mk_keygen(100 + i, &params, &ntt, &mut rng);
+        let d = plat_mkfhe::mk_keys::mk_keygen(200 + i, &params, &ntt, &mut rng);
+        let cm = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &p.public, 8, &mut rng);
+        let cw = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &p.public, 3, &mut rng);
+        let cg = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &d.public, 5, &mut rng);
+        let ci = plat_mkfhe::MkCiphertext::encrypt_u64(&params, &ntt, &d.public, 4, &mut rng);
+        let s1 = plat_mkfhe::mk_scalar_mul(&params, &cm, 35);
+        let s2 = plat_mkfhe::mk_scalar_mul(&params, &cg, 25);
+        let s3 = plat_mkfhe::mk_scalar_mul(&params, &ci, 25);
+        let s4 = plat_mkfhe::mk_scalar_mul(&params, &cw, 15);
+        let a1 = plat_mkfhe::mk_add(&params, &s1, &s2);
+        let a2 = plat_mkfhe::mk_add(&params, &a1, &s3);
+        let cs = plat_mkfhe::mk_add(&params, &a2, &s4);
+        let _ = plat_mkfhe::cooperative_decrypt(&params, &ntt, &cs, &[&p.secret, &d.secret]);
+    }
+    let pipeline_us = t0.elapsed().as_micros() as f64 / pipeline_iters as f64;
+    let pipeline_ms = pipeline_us / 1000.0;
+
+    println!("  {label} (N={}, q={}):", params.n, params.q);
+    println!("    keygen:          {keygen_us:.0}µs");
+    println!("    encrypt:         {encrypt_us:.0}µs");
+    println!("    cross-party add: {add_us:.0}µs");
+    println!("    scalar_mul:      {smul_us:.0}µs");
+    println!("    composite_score: {score_us:.0}µs");
+    println!("    full pipeline:   {pipeline_us:.0}µs ({pipeline_ms:.2}ms)");
+    println!();
+}
 
 fn main() {
     let ctx = MkFheScoring::new();
@@ -126,4 +216,10 @@ fn main() {
         let per_pair_ms = total_ms / n as f64;
         println!("N={n:>4}: {total_ms:.1}ms total, {per_pair_ms:.3}ms/pair");
     }
+
+    // --- Parameter comparison ---
+    println!("\n--- Parameter comparison (test_small vs research_2048 vs production_8192) ---\n");
+    bench_params("test_small", plat_core::params::Params::test_small);
+    bench_params("research_2048", plat_core::params::Params::research_2048);
+    bench_params("production_8192", plat_core::params::Params::production_8192);
 }
