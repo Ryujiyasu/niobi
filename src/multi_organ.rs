@@ -11,10 +11,50 @@
 //!     - Each patient receives at most 1 of each organ type (penalty)
 //!     - Combined transplant bonus (liver+kidney, heart+lung)
 
-use crate::annealing::{QuboProblem, QuboSolution, simulated_annealing};
+use crate::annealing::{QuboProblem, simulated_annealing};
 use crate::scoring::{self, BloodType};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+
+/// Literature-based combined transplant rates.
+///
+/// Sources:
+///   - SLK (liver+kidney): 7.9% of liver transplants — OPTN/SRTR 2023 Annual Data Report: Liver
+///   - Heart multi-organ: 13.5% of heart transplants — OPTN/SRTR 2023 Annual Data Report: Heart
+///     (heart-kidney 421, heart-liver 70, heart-lung 53 of 4,092 adult heart transplants)
+///   - SPK (pancreas+kidney): 79.2% of pancreas wait-listings — OPTN/SRTR 2023 Annual Data Report: Pancreas
+///   - Japan brain-dead donors: 130–139/year (JOTN 2024); λ≈0.37/day → P(≥2 same day)≈5.9% ≈ 22 days/year
+#[derive(Clone, Debug)]
+pub struct ScenarioParams {
+    /// Fraction of liver patients needing liver+kidney combined (SLK).
+    pub slk_rate: f64,
+    /// Fraction of heart patients needing heart+lung combined.
+    pub heart_lung_rate: f64,
+    /// Fraction of pancreas patients needing pancreas+kidney combined (SPK).
+    pub spk_rate: f64,
+    /// Number of simultaneous donors (1 = standard, 2+ = concurrent).
+    pub n_donors: usize,
+}
+
+impl ScenarioParams {
+    /// OPTN/SRTR 2023-based rates (conservative: uses actual transplant ratios).
+    pub fn optn_2023() -> Self {
+        Self {
+            slk_rate: 0.079,       // 7.9% SLK
+            heart_lung_rate: 0.013, // 1.3% heart-lung (53/4,092)
+            spk_rate: 0.792,       // 79.2% SPK
+            n_donors: 1,
+        }
+    }
+
+    /// Two concurrent donors (Poisson-justified: ~22 days/year in Japan).
+    pub fn optn_2023_dual_donor() -> Self {
+        Self {
+            n_donors: 2,
+            ..Self::optn_2023()
+        }
+    }
+}
 
 /// Organ types available from a brain-dead donor.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -202,7 +242,9 @@ pub fn build_multi_organ_qubo(
                     (Organ::Liver, Organ::KidneyL) | (Organ::Liver, Organ::KidneyR) |
                     (Organ::KidneyL, Organ::Liver) | (Organ::KidneyR, Organ::Liver) |
                     (Organ::Heart, Organ::LungL) | (Organ::Heart, Organ::LungR) |
-                    (Organ::LungL, Organ::Heart) | (Organ::LungR, Organ::Heart)
+                    (Organ::LungL, Organ::Heart) | (Organ::LungR, Organ::Heart) |
+                    (Organ::Pancreas, Organ::KidneyL) | (Organ::Pancreas, Organ::KidneyR) |
+                    (Organ::KidneyL, Organ::Pancreas) | (Organ::KidneyR, Organ::Pancreas)
                 );
                 if is_combined {
                     quadratic.push((a, b, -combined_bonus)); // negative = bonus
@@ -285,19 +327,38 @@ pub fn solve_independent(
     assignments
 }
 
-/// Generate a realistic multi-organ scenario.
+/// Generate a realistic multi-organ scenario (legacy: fixed 15%/10% combined rates).
 pub fn generate_multi_organ_scenario(
     n_per_organ: usize,
     seed: u64,
 ) -> (MultiOrganDonor, Vec<MultiOrganPatient>) {
+    generate_scenario_with_params(n_per_organ, seed, &ScenarioParams {
+        slk_rate: 0.15,
+        heart_lung_rate: 0.10,
+        spk_rate: 0.0,
+        n_donors: 1,
+    }).0
+}
+
+/// Generate scenario with literature-based parameters.
+///
+/// Returns (donors, patients). For single-donor scenarios, returns vec of 1.
+pub fn generate_scenario_with_params(
+    n_per_organ: usize,
+    seed: u64,
+    params: &ScenarioParams,
+) -> ((MultiOrganDonor, Vec<MultiOrganPatient>), Vec<MultiOrganDonor>) {
     let mut rng = StdRng::seed_from_u64(seed);
 
-    let donor = MultiOrganDonor {
-        blood_type: random_bt(&mut rng),
-        body_weight: rng.gen_range(50.0..90.0),
-        liver_volume: rng.gen_range(1000.0..1800.0),
-        region_km: rng.gen_range(0.0..500.0),
-    };
+    let mut donors = Vec::new();
+    for _ in 0..params.n_donors {
+        donors.push(MultiOrganDonor {
+            blood_type: random_bt(&mut rng),
+            body_weight: rng.gen_range(50.0..90.0),
+            liver_volume: rng.gen_range(1000.0..1800.0),
+            region_km: rng.gen_range(0.0..500.0),
+        });
+    }
 
     let mut patients = Vec::new();
     let all_organs = Organ::all();
@@ -305,8 +366,9 @@ pub fn generate_multi_organ_scenario(
     for (organ_idx, &organ) in all_organs.iter().enumerate() {
         for j in 0..n_per_organ {
             let needs_combined = match organ {
-                Organ::Liver => rng.gen_range(0..100) < 15,  // 15% need liver+kidney
-                Organ::Heart => rng.gen_range(0..100) < 10,  // 10% need heart+lung
+                Organ::Liver => rng.gen_range(0.0..1.0) < params.slk_rate,
+                Organ::Heart => rng.gen_range(0.0..1.0) < params.heart_lung_rate,
+                Organ::Pancreas => rng.gen_range(0.0..1.0) < params.spk_rate,
                 _ => false,
             };
 
@@ -315,6 +377,7 @@ pub fn generate_multi_organ_scenario(
                 match organ {
                     Organ::Liver => needed.push(Organ::KidneyL),
                     Organ::Heart => needed.push(Organ::LungL),
+                    Organ::Pancreas => needed.push(Organ::KidneyR),
                     _ => {}
                 }
             }
@@ -332,7 +395,168 @@ pub fn generate_multi_organ_scenario(
         }
     }
 
-    (donor, patients)
+    ((donors[0].clone(), patients), donors)
+}
+
+/// Build QUBO for multi-donor multi-organ allocation.
+///
+/// Each donor provides a full set of organs. Variables: x_{d,k,i} for
+/// donor d, organ k, patient i. Cross-donor kidney competition is the
+/// key scenario where QUBO outperforms independent allocation.
+pub fn build_multi_donor_qubo(
+    donors: &[MultiOrganDonor],
+    patients: &[MultiOrganPatient],
+    organs: &[Organ],
+    combined_bonus: f64,
+    penalty: f64,
+) -> (QuboProblem, Vec<(usize, Organ, usize)>) {
+    // var_map: (donor_idx, organ, patient_idx)
+    let mut var_map: Vec<(usize, Organ, usize)> = Vec::new();
+    let mut linear: Vec<f64> = Vec::new();
+
+    for (d, donor) in donors.iter().enumerate() {
+        for &organ in organs {
+            for (i, patient) in patients.iter().enumerate() {
+                if !patient.needed_organs.contains(&organ) {
+                    continue;
+                }
+                let s = organ_score(donor, patient, &organ);
+                if s > 0.0 {
+                    linear.push(-s);
+                    var_map.push((d, organ, i));
+                }
+            }
+        }
+    }
+
+    let n_vars = linear.len();
+    let mut quadratic: Vec<(usize, usize, f64)> = Vec::new();
+
+    for a in 0..n_vars {
+        for b in (a + 1)..n_vars {
+            let (d_a, org_a, p_a) = var_map[a];
+            let (d_b, org_b, p_b) = var_map[b];
+
+            // Constraint: each (donor, organ) → at most 1 patient
+            if d_a == d_b && org_a == org_b {
+                quadratic.push((a, b, penalty));
+                continue;
+            }
+
+            // Constraint: each patient gets at most 1 of each organ type across all donors
+            if p_a == p_b && org_a == org_b {
+                quadratic.push((a, b, penalty));
+                continue;
+            }
+
+            // Paired organ constraint (patient can't get both kidneys, both lungs)
+            if p_a == p_b {
+                let same_type = matches!(
+                    (org_a, org_b),
+                    (Organ::KidneyL, Organ::KidneyR) | (Organ::KidneyR, Organ::KidneyL) |
+                    (Organ::LungL, Organ::LungR) | (Organ::LungR, Organ::LungL)
+                );
+                if same_type {
+                    quadratic.push((a, b, penalty));
+                    continue;
+                }
+            }
+
+            // Combined transplant bonus (same patient, same donor, complementary organs)
+            if p_a == p_b && d_a == d_b {
+                let patient = &patients[p_a];
+                if patient.needs_combined {
+                    let is_combined = matches!(
+                        (org_a, org_b),
+                        (Organ::Liver, Organ::KidneyL) | (Organ::Liver, Organ::KidneyR) |
+                        (Organ::KidneyL, Organ::Liver) | (Organ::KidneyR, Organ::Liver) |
+                        (Organ::Heart, Organ::LungL) | (Organ::Heart, Organ::LungR) |
+                        (Organ::LungL, Organ::Heart) | (Organ::LungR, Organ::Heart) |
+                        (Organ::Pancreas, Organ::KidneyL) | (Organ::Pancreas, Organ::KidneyR) |
+                        (Organ::KidneyL, Organ::Pancreas) | (Organ::KidneyR, Organ::Pancreas)
+                    );
+                    if is_combined {
+                        quadratic.push((a, b, -combined_bonus));
+                    }
+                }
+            }
+        }
+    }
+
+    let labels = var_map.iter().map(|&(d, o, p)| (d * 8 + o.index(), p)).collect();
+    (
+        QuboProblem {
+            n_vars,
+            linear,
+            quadratic,
+            labels,
+        },
+        var_map,
+    )
+}
+
+/// Solve multi-donor multi-organ allocation with QUBO.
+pub fn solve_multi_donor(
+    donors: &[MultiOrganDonor],
+    patients: &[MultiOrganPatient],
+    organs: &[Organ],
+    combined_bonus: f64,
+    penalty: f64,
+    sweeps: usize,
+    seed: u64,
+) -> Vec<(usize, Organ, usize, f64)> {
+    let (qubo, var_map) = build_multi_donor_qubo(donors, patients, organs, combined_bonus, penalty);
+
+    if qubo.n_vars == 0 {
+        return vec![];
+    }
+
+    let solution = simulated_annealing(&qubo, sweeps, 10.0, 0.01, seed);
+
+    let mut assignments = Vec::new();
+    for (idx, &assigned) in solution.assignment.iter().enumerate() {
+        if assigned {
+            let (donor_idx, organ, patient_idx) = var_map[idx];
+            let score = organ_score(&donors[donor_idx], &patients[patient_idx], &organ);
+            assignments.push((donor_idx, organ, patient_idx, score));
+        }
+    }
+    assignments
+}
+
+/// Independent greedy for multi-donor: each (donor, organ) solved independently.
+pub fn solve_independent_multi_donor(
+    donors: &[MultiOrganDonor],
+    patients: &[MultiOrganPatient],
+    organs: &[Organ],
+) -> Vec<(usize, Organ, usize, f64)> {
+    let mut assignments = Vec::new();
+    let mut assigned_patients = std::collections::HashSet::new();
+
+    for (d, donor) in donors.iter().enumerate() {
+        for &organ in organs {
+            let mut best_idx = None;
+            let mut best_score = 0.0f64;
+            for (i, patient) in patients.iter().enumerate() {
+                if assigned_patients.contains(&i) {
+                    continue;
+                }
+                if !patient.needed_organs.contains(&organ) {
+                    continue;
+                }
+                let s = organ_score(donor, patient, &organ);
+                if s > best_score {
+                    best_score = s;
+                    best_idx = Some(i);
+                }
+            }
+            if let Some(idx) = best_idx {
+                assignments.push((d, organ, idx, best_score));
+                assigned_patients.insert(idx);
+            }
+        }
+    }
+    assignments
 }
 
 fn random_bt(rng: &mut StdRng) -> BloodType {
