@@ -279,7 +279,7 @@ MKFHEの理論的安全性に匹敵する実用的安全性を達成する。
 | OpenFHE | C++ | ○ | × | Threshold BGV/BFV/CKKSのみ |
 | Lattigo | Go | ○ | × | Collective key generationに基づく |
 | TFHE-rs (Zama) | Rust | × | × | 単一鍵TFHEのみ |
-| **plat** | **Rust** | — | **○** | **López-Alt et al. 2012に基づくMKFHE** |
+| **plat** | **Rust** | **○** | **○** | **Threshold FHE + MKFHE両対応、GPU加速** |
 
 本研究ではMKFHEをplat crateとして実装し、
 GPU加速（CUDA 14x）を備えた実用ワークロード
