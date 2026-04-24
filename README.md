@@ -1,288 +1,282 @@
 # niobi
 
-**量子最適化だけでは臓器移植は救えない。データが集まらなければ、計算する意味がない。**
+**Quantum optimisation alone cannot save organ transplant patients. If the data never shows up, the computation has nothing to compute.**
 
-niobi は、プライバシー保護と量子最適化を統合した肝臓移植マッチングシステム。
-「データを出しても読めない」暗号基盤により、初めて全病院のデータが集まり、
-初めて量子最適化が社会実装される。
+niobi is a liver-transplant matching system that fuses privacy-preserving cryptography with quantum-annealing optimisation. An encrypted substrate that lets hospitals contribute data *without anyone being able to read it* is what makes a full-network pool possible for the first time — and that is what makes large-scale quantum optimisation meaningful for the first time.
 
-NEDO Challenge Q-2: 創薬エコシステムの強化に向けた医療データ共有アプリケーション・アルゴリズムの開発
+Submitted to **NEDO Challenge Q-2**: *Medical data sharing applications and algorithms for strengthening the drug discovery ecosystem.*
 
-## なぜ今の臓器移植は最適化されていないか
+[日本語 README →](./README.ja.md)
 
-日本の献腎移植待機期間は **平均15年**。登録者14,330人のうち年間移植はわずか248件（1.7%）。
+## Why organ transplantation isn't optimised today
 
-原因は計算速度ではない。**データが集まらない**ことが原因。
+In Japan, the average wait for a deceased-donor kidney transplant is **15 years**. Of the 14,330 registered candidates, only 248 receive a transplant in a given year — **1.7 %**.
+
+The bottleneck is not compute speed. The bottleneck is that **the data never aggregates**.
 
 ```
-現状の構造的問題:
+The structural problem today:
 
-  病院A: 患者データを持っている
-  病院B: ドナーデータを持っている
-  病院C: 両方持っている
+  Hospital A: has patient data
+  Hospital B: has donor data
+  Hospital C: has both
 
-  → 互いの医療データを共有できない（個人情報保護法・院内規定）
-  → 中央機関に生データを渡す必要がある
-  → 病院は消極的・データの質がバラバラ
-  → 最適化の入力が揃わない
-  → 待機期間が長い人を優先するだけの単純なルールで運用
-  → 最適解との乖離を誰も検証できない
+  → Cannot share medical data with each other (Personal Information
+    Protection Act, internal hospital policies)
+  → Would have to hand raw data to a central authority
+  → Hospitals are reluctant; data quality is uneven
+  → The optimiser's inputs never line up
+  → Operations fall back to a simple "longest waiter first" rule
+  → Nobody can measure the gap from the optimum
 ```
 
-## niobi の包括的解決策
+## niobi's end-to-end solution
 
-量子最適化 **だけ** では社会実装されない。
-プライバシー問題が解決しない限り、病院はデータを出さない。
+Quantum optimisation **alone** will not deploy into society. Until the privacy problem is solved, hospitals will not release the data.
 
-niobi は **両方を同時に解決する**。
+niobi solves **both at once**.
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│                    niobi アーキテクチャ                    │
+│                    niobi architecture                  │
 │                                                        │
-│  Phase 1: データを出せるようにする（前提条件）            │
+│  Phase 1 — make the data releasable (precondition)     │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │ hyde (TPM + PQC/ML-KEM-768)                      │  │
-│  │   各病院でデータを暗号化・デバイスに紐付け          │  │
-│  │   量子コンピュータでも解読不能な鍵交換              │  │
+│  │ hyde (TPM + PQC / ML-KEM-768)                    │  │
+│  │   Each hospital encrypts data, device-bound.     │  │
+│  │   Key exchange resistant to quantum attack.      │  │
 │  │                                                  │  │
-│  │ plat (FHE/CKKS)                                  │  │
-│  │   暗号化したまま適合性スコアを計算                  │  │
-│  │   復号せずに演算 → 誰も生データを見ない            │  │
+│  │ plat (FHE / CKKS)                                │  │
+│  │   Compute compatibility scores on ciphertext.    │  │
+│  │   No decryption — nobody sees raw data.          │  │
 │  │                                                  │  │
 │  │ argo (ZKP)                                       │  │
-│  │   「この患者とドナーは適合する」を証明              │  │
-│  │   なぜ適合するか（血液型等）は一切非開示            │  │
+│  │   Prove "this patient and this donor match."     │  │
+│  │   Why they match (blood type, etc.) stays sealed.│  │
 │  └──────────────────────────────────────────────────┘  │
 │                         ↓                              │
-│  Phase 2: 集まったデータで最適解を出す                   │
+│  Phase 2 — find the optimum on the aggregated pool     │
 │  ┌──────────────────────────────────────────────────┐  │
-│  │ 量子アニーリング (QUBO)                           │  │
-│  │   全ペアの適合スコア行列 → 最大マッチング導出      │  │
-│  │   CPUでは10x10で全探索不能                        │  │
-│  │   量子なら大規模でも最適解に到達                    │  │
+│  │ Quantum annealing (QUBO formulation)             │  │
+│  │   Pairwise compatibility matrix → maximum match. │  │
+│  │   Classical brute-force fails at 10×10.          │  │
+│  │   Quantum reaches the optimum at larger scales.  │  │
 │  └──────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────┘
 ```
 
-## 恣意性の排除
+## Eliminating discretion
 
-現在の臓器移植は **「誰かが選んでいる」** 構造。コーディネーターの判断、
-ポイント計算式の設計者の意図、病院間の力関係 — すべてが結果に影響する。
-選ばれなかった理由は不透明で、検証もできない。
+Today's organ allocation is always "someone is choosing." A coordinator's judgement, the designer's intent behind a points formula, the power dynamics between hospitals — all of it shapes the outcome. When you are not selected, you cannot see why, and you cannot audit why.
 
-niobi は恣意性を **数学的にゼロ** にする。
+niobi reduces discretion to **mathematically zero**.
 
-- 入力は暗号化されている → 誰も操作できない
-- スコア計算はFHEで実行 → 中間結果を覗けない
-- 適合性はZKPで証明 → 検証可能だが入力は非開示
-- 最適化は量子アニーリング → 人間の判断が介在しない
-- **個人間で適合が分かり、合意で決まる → 病院は仲介に徹する**
+- Inputs are encrypted → nobody can manipulate them.
+- Scoring runs under FHE → nobody can peek at intermediate values.
+- Compatibility is proved by ZKP → verifiable, but inputs remain sealed.
+- The optimiser is a quantum annealer → no human judgement enters the loop.
+- **Compatibility is known between the two individuals and settled by their consent — hospitals return to being intermediaries.**
 
-データの主権は個人にある。病院はオペレーションを担うだけで、
-マッチングの意思決定者ではなくなる。
+Data sovereignty stays with the individual. Hospitals run operations; they are no longer the decision-makers for who matches whom.
 
-## セキュリティモデル: 被害局所化と多端末防御
+## Security model: blast-radius localisation and multi-device defence
 
-従来のシステムでは、中央データベースが攻撃されると**全員のデータが漏洩**する。
-niobi では構造が根本的に異なる。
+In traditional systems, a breach of the central database leaks **everyone's** data. niobi is structurally different.
 
-### 鍵漏洩の影響範囲 = その個人1人だけ
+### Blast radius of a key compromise = one person
 
 ```
-従来の中央集権型:
-  攻撃者がサーバーを突破 → 全患者14,330人のデータが漏洩
-  1つの鍵で全員のデータにアクセス可能
+Centralised legacy:
+  Attacker breaks the server → 14,330 patients' data leaks.
+  A single key opens the entire dataset.
 
 niobi:
-  攻撃者が個人Aの鍵を窃取 → 個人Aの1人分のデータのみ
-  他の14,329人のデータは別の鍵で暗号化されている
-  システム全体は完全に無傷
+  Attacker steals individual A's key → only A's data.
+  The other 14,329 records are under different keys.
+  The system as a whole is untouched.
 ```
 
-鍵は個人のデバイス（TPM）に閉じ込められている。
-病院もサーバーも鍵を持っていないから、攻撃しても鍵がない。
-**守るべきものが分散している = 攻撃が割に合わない。**
+Keys live inside the individual's device (TPM). Neither hospitals nor servers hold keys, so an attack on them has nothing to steal. **What is worth protecting is distributed. Attacks stop being economical.**
 
-### 多端末閾値認証: デバイスを掛け算する
+### Multi-device threshold authentication: multiply your devices
 
-1台のデバイスだけに依存する必要はない。
-鍵を**複数のデバイスに分割**し、復号には全端末の協力を要求できる。
+You do not have to rely on a single device. Split the key across devices and require cooperation to decrypt.
 
 ```
-例: PC + スマートフォンの2端末構成
+Example: PC + smartphone, 2-device configuration
 
-  PC:     鍵の前半 k₁ を保持
-  スマホ:  鍵の後半 k₂ を保持
-  復号:   k = k₁ × k₂ (両方が揃って初めて復号可能)
+  PC:         holds the first half k₁
+  Phone:      holds the second half k₂
+  Decryption: k = k₁ × k₂ — both pieces required
 
-  → PCが盗まれても k₁ だけでは復号不能
-  → スマホが盗まれても k₂ だけでは復号不能
-  → 両方同時に盗む必要がある = 攻撃コストが指数的に上昇
+  → PC stolen? k₁ alone cannot decrypt.
+  → Phone stolen? k₂ alone cannot decrypt.
+  → Attacker must steal both simultaneously — cost explodes exponentially.
 ```
 
-端末を増やせば増やすほどセキュリティは掛け算で強くなる。
+More devices, exponentially harder attacks:
 
 ```
-1端末:  攻撃面 = 1デバイス
-2端末:  攻撃面 = 2デバイスの同時窃取（事実上不可能）
-3端末:  攻撃面 = 3デバイスの同時窃取（原理的に不可能）
+1 device:  attack surface = 1 device
+2 devices: attack surface = simultaneous theft of 2 devices (practically impossible)
+3 devices: attack surface = simultaneous theft of 3 devices (structurally impossible)
 ```
 
-**自分のデータを、自分の管理で、自分の好きなだけ堅くできる。**
-セキュリティの強度を決めるのはシステム管理者ではなく、個人自身。
-これがデータ主権の本質的な意味。
+**Your data, in your custody, hardened to the level you choose.** The strength of protection is set by the individual, not a system administrator. That is what data sovereignty actually means.
 
-### セキュリティは個人が選ぶ
+### Security is a choice the individual makes
 
-強制ではない。**個人がリスクと利便性のバランスを自分で決められる。**
+No coercion. **Each person trades off convenience against risk on their own terms.**
 
 ```
-利便性重視の人:
-  スマホ1台だけで運用
-  → 手軽。日常的な操作は最小限
-  → 紛失リスクはあるが、漏洩しても自分の1人分だけ
+Convenience-first:
+  Phone only.
+  → Minimal friction for daily use.
+  → Loss is a risk, but a leak reveals only that one person.
 
-バランス型の人:
-  スマホ + PC の2端末
-  → 通常の医療データならこれで十分
-  → 片方を紛失しても安全
+Balanced:
+  Phone + PC.
+  → Sufficient for typical medical data.
+  → Losing one does not compromise the other.
 
-最高セキュリティの人:
-  スマホ + PC + セキュリティキー(YubiKey等)
-  → 3端末が揃わないと復号不能
-  → 国家レベルの攻撃にも耐える
+Maximum security:
+  Phone + PC + hardware token (YubiKey etc.).
+  → Decryption requires all three.
+  → Withstands nation-state level attack.
 ```
 
-従来のシステムでは、セキュリティレベルは管理者が一律に決める。
-個人が「もっと守りたい」と思っても、できることがない。
+Legacy systems fix the security level once, for everyone, at the administrator. If you want more protection, there is no knob to turn.
 
-niobi では逆。**利便性を求めて簡素にしてもいいし、
-怖いからもっとセキュアにしてもいい。** どちらも個人の自由。
-システムはどちらの選択も等しくサポートする。
+niobi inverts this. **Keep it simple if you want convenience; harden it if you're worried.** The system supports both choices equally.
 
-### 従来システムとの比較
+### Compared to prior art
 
-| | 中央集権型 | ブロックチェーン | niobi |
+|  | Centralised | Blockchain | niobi |
 |---|---|---|---|
-| 鍵漏洩の被害 | **全員** | 個人のみ | **個人のみ** |
-| 多端末防御 | なし | ウォレット依存 | **閾値暗号** |
-| サーバー攻撃 | 全データ漏洩 | 全データ公開済 | **暗号文のみ** |
-| セキュリティ責任 | 管理者 | 個人 | **個人（支援あり）** |
+| Damage from a key leak | **Everyone** | Individual only | **Individual only** |
+| Multi-device defence | None | Wallet-dependent | **Threshold cryptography** |
+| Server attack | All data leaks | All data already public | **Only ciphertext exists** |
+| Responsibility for security | Administrator | Individual | **Individual (with support)** |
 
-## データ真正性: 偽装が原理的に不可能な構造
+## Data authenticity: forgery is structurally impossible
 
-「自分のデータを自分で守れる」だけでは不十分。
-**嘘のデータを入れられない** ことも保証しなければならない。
+"Protecting your own data" is not enough. niobi must also guarantee that **fake data cannot be injected**.
 
-niobi では、医療データに検査機関の電子署名（証明書）が貼り付いている。
-署名のないデータ、改ざんされたデータは、プロトコルの中で自動的に弾かれる。
+Every medical record carries a digital signature from the issuing laboratory or hospital. Data without a valid signature, or data that has been altered, is automatically rejected by the protocol.
 
 ```
-検査機関（病院・検査所）
-  → 検査結果に電子署名を付与（検査機関の秘密鍵で署名）
-  → 署名付きデータを個人のデバイスに渡す
+Testing laboratory / hospital
+  → Signs each test result with the institution's private key.
+  → Hands the signed record to the individual's device.
 
-個人のデバイス
-  → 署名付きデータを受け取る（平文 + 署名）
-  → hyde で暗号化してプールに投入
-  → 暗号文の中に署名も含まれている
+Individual's device
+  → Receives the signed record (plaintext + signature).
+  → Encrypts via hyde into the pool.
+  → The signature is carried inside the ciphertext.
 
-プール（FHE計算時）
-  → 暗号化したまま署名検証も可能
-  → argo(ZKP) で「正規の署名付きデータである」と証明
-  → 署名が無いデータ / 改ざんされたデータは弾かれる
+The pool (during FHE computation)
+  → Signature verification still works on ciphertext.
+  → argo (ZKP) proves "this is a legitimately signed record."
+  → Records without a signature, or altered records, are rejected.
 ```
 
-### 攻撃シナリオと防御
+### Attack scenarios and defences
 
-| 攻撃 | 結果 |
+| Attack | Result |
 |---|---|
-| 自分のMELDスコアを高く偽装 | 検査機関の署名がない → ZKP証明生成不能 |
-| 他人のデータを自分として投入 | 署名の対象が他人 → 自分のhyde鍵と紐付かない |
-| 署名ごと偽造 | 検査機関の秘密鍵がない → 署名偽造は計算量的に不可能 |
+| Inflate your own MELD score | No lab signature → ZKP cannot be produced |
+| Submit someone else's data as your own | Signature binds to a different individual → fails to pair with your hyde key |
+| Forge the signature itself | You do not have the lab's private key → signature forgery is computationally infeasible |
 
-### 3重のロック
+### Three locks
 
-1. **検査機関の署名** → データの出所を証明（偽造不能）
-2. **hyde鍵との紐付け** → そのデータがその個人のものであることを証明
-3. **ZKPでの検証** → 暗号化したまま「正規データである」ことを証明、中身は非開示
+1. **Lab signature** — proves data provenance (unforgeable).
+2. **Binding to the hyde key** — proves the data belongs to this individual.
+3. **ZKP verification** — proves the record is well-formed, under encryption, without revealing its content.
 
-嘘のデータでマッチングを有利にすることは **数学的に不可能**。
-これは「信頼できる人が正しく入力する」という運用ルールではなく、
-**嘘をつくための計算が宇宙の寿命を使っても終わらない** という物理法則に基づく保証。
+Gaining an advantage by lying is **mathematically impossible**. This is not "we trust honest actors to enter correct data"; it is a guarantee grounded in the physical fact that computing a forged signature would take longer than the life of the universe.
 
-## なぜこの順序が重要か
+## Why the ordering matters
 
-| アプローチ | データは集まるか | 最適解は出るか | 社会実装できるか |
-|-----------|:---:|:---:|:---:|
-| 従来（中央集権） | △ 消極的 | × ルールベース | △ 現状維持 |
-| 量子最適化のみ | × 同じ問題 | ○ | × データがない |
-| プライバシー保護のみ | ○ | × 古典の限界 | △ 次善解 |
-| **niobi（両方）** | **○** | **○** | **○** |
+| Approach | Does data aggregate? | Does optimisation reach the optimum? | Deployable? |
+|---|:---:|:---:|:---:|
+| Status quo (centralised) | △ reluctantly | ✗ rules-based | △ stagnant |
+| Quantum optimisation only | ✗ same barrier | ○ | ✗ no data |
+| Privacy preservation only | ○ | ✗ classical limits | △ next-best |
+| **niobi (both)** | **○** | **○** | **○** |
 
-## 検証結果
+## Empirical results
 
-D-Wave SimulatedAnnealingSampler による量子アニーリングと古典手法の比較:
+D-Wave's `SimulatedAnnealingSampler` vs classical baselines:
 
-| 規模 | Greedy | 量子アニーリング | Brute Force | Greedyの劣化 |
-|------|--------|:---:|:---:|:---:|
-| 4ドナー×4レシピエント | 3マッチ | **4マッチ（最適解）** | 4マッチ | **22.3%** |
-| 6ドナー×6レシピエント | 4マッチ | **5マッチ（最適解）** | 5マッチ | **17.5%** |
-| 10ドナー×10レシピエント | 7マッチ | 7マッチ | 計算不能 | — |
+| Scale | Greedy | Quantum annealing | Brute force | Greedy's loss |
+|---|---|:---:|:---:|:---:|
+| 4 donors × 4 recipients | 3 matches | **4 matches (optimum)** | 4 matches | **22.3 %** |
+| 6 donors × 6 recipients | 4 matches | **5 matches (optimum)** | 5 matches | **17.5 %** |
+| 10 donors × 10 recipients | 7 matches | 7 matches | infeasible | — |
 
-Greedy法（現状の運用に近い手法）では、最適解と比較して **17〜22%のマッチングを見落とす**。
-臓器移植においてこの差は、救えたはずの命を救えないことを意味する。
+Greedy matching (closest to current operational heuristics) misses **17 – 22 %** of optimal matches. In organ transplantation, that gap represents lives that could have been saved and weren't.
 
-## 個人主権プロトコル（7ステップ）
+## Individual-sovereign protocol (7 steps)
 
-病院が起点ではない。**個人が起点**。
+The starting point is not the hospital. It is **the individual**.
 
 ```
-Step 1: 匿名鍵生成       → 個人のデバイス(hyde+TPM)でローカル生成
-                           登録不要。病院不要。名前不要。
-Step 2: 個人がデータ投入   → 自分の医療データを暗号化してプールへ
-                           どの病院に通っているかも非開示
-Step 3: FHEスコア計算     → 暗号化したまま適合性を演算
-Step 4: ZKP証明生成       → 匿名ペアの適合/非適合のみ証明
-Step 5: 量子最適化        → 匿名インデックスのみ処理
-Step 6: 個人に通知        → 「適合する人がいます」+ ZKP証明
-                           相手が誰かは合意するまで非開示
-                           無視しても誰にもバレない
-Step 7: 合意 → 病院が仲介 → 二人が合意して初めて病院が登場
-                           病院は手術を担うだけ
-                           マッチングの経緯は知らない
+Step 1: Anonymous key generation
+        → Generated locally on the individual's device (hyde + TPM).
+        → No registration. No hospital. No name.
+
+Step 2: Individual contributes data
+        → Encrypt medical record, drop into the pool.
+        → Not even the hospital of origin is disclosed.
+
+Step 3: FHE score computation
+        → Compatibility computed on ciphertext.
+
+Step 4: ZKP proof generation
+        → Match / no-match proved for anonymous pair indices only.
+
+Step 5: Quantum optimisation
+        → Operates on anonymous indices.
+
+Step 6: Notify the individuals
+        → "A match exists" + the ZKP.
+        → The counterparty's identity stays hidden until both consent.
+        → Ignoring a notification is invisible — nobody learns you ignored it.
+
+Step 7: Consent → hospital mediates
+        → The hospital appears only after the two individuals agree.
+        → Hospitals perform the surgery. They do not know the history of the match.
 ```
 
-**病院はStep 7まで一切登場しない。**
-どのステップでも、医療情報・個人の身元・通知の有無は誰にも観測できない。
+**The hospital does not appear until step 7.** At no step can any third party observe medical data, identities, or even whether a notification was delivered.
 
-## 適合性スコア（暗号化データ上で計算）
+## Compatibility scoring (computed on encrypted data)
 
-- ABO血液型互換性
-- MELD/PELDスコア（緊急度）
-- グラフト重量比（GRWR: ドナー肝容積 / レシピエント体重）
-- 冷阻血時間（地理的距離から推定、12時間制約）
-- 待機期間
+- ABO blood-group compatibility
+- MELD / PELD score (urgency)
+- Graft weight ratio (GRWR: donor liver volume / recipient body weight)
+- Cold-ischaemia time (geographic distance, 12-hour constraint)
+- Waiting duration
 
-## プロジェクト構造
+## Project layout
 
 ```
 src/
-├── lib.rs               — モジュール定義
-├── scoring.rs           — 適合性スコア計算
-├── matching.rs          — Greedy matching
-├── protocol.rs          — E2Eプロトコル（plaintext版）
-├── crypto.rs            — hyde/argo/plat暗号化層
-└── privacy_protocol.rs  — 6ステッププライバシー保護プロトコル
+├── lib.rs               — module definitions
+├── scoring.rs           — compatibility scoring
+├── matching.rs          — greedy matching
+├── protocol.rs          — end-to-end protocol (plaintext variant)
+├── crypto.rs            — hyde / argo / plat encryption layer
+└── privacy_protocol.rs  — 6-step privacy-preserving protocol
 
 quantum/
-├── liver_matching_qubo.py  — QUBO量子アニーリング比較
-├── matching_results.json   — 比較結果データ
-└── simulate_qkd.py         — BB84量子鍵配送シミュレーション
+├── liver_matching_qubo.py   — QUBO / quantum annealing benchmark
+├── matching_results.json    — comparison data
+└── simulate_qkd.py          — BB84 quantum key distribution simulation
 ```
 
-## 開発
+## Development
 
 ```bash
 # Rust core (18 tests)
@@ -295,145 +289,131 @@ pip install dimod dwave-samplers numpy
 python liver_matching_qubo.py
 ```
 
-## 将来展望
+## Forward outlook
 
-### 全国民プール化
+### Nationwide default pool
 
-現在の臓器移植は「病院に登録した人」だけがマッチング対象。
-潜在的なドナー候補は存在しないことになっている。
+Today's organ transplantation only matches people who have explicitly registered with a hospital. Latent donor candidates effectively do not exist to the system.
 
-niobi + マイナンバーカード連携により、**全国民がデフォルトで候補プール**に入れる。
-hyde が個人データを暗号化しているため、プールに入ること自体がプライバシーリスクにならない。
-適合する人が見つかったときだけ argo が通知し、個人が判断する。
+niobi + Japan's My Number card integration lets **every citizen be in the candidate pool by default**. Because hyde encrypts every individual's data, being in the pool is not itself a privacy risk. Only when a match arises does argo notify, and only then does the individual decide.
 
-- 現状: 待機者 14,330人 vs 登録ドナー（年間数百人）
-- niobi: 待機者 14,330人 vs **1.2億人の潜在プール**
+- Today: 14,330 waiting recipients vs. a few hundred registered donors per year.
+- With niobi: 14,330 waiting recipients vs. a latent pool of **120 million people**.
 
-### 拒否の不可視性
+### Invisibility of refusal
 
-適合通知を受けて「提供しない」を選んだ場合、その事実は **誰にも観測できない**。
+If you receive a match notification and choose not to proceed, that fact is **observable by no one**.
 
-- argo は「適合する」を証明するが、通知を受けたかどうかは証明しない
-- hyde がデバイスレベルで暗号化しているため、通知の有無すら外部から不可視
-- 沈黙と拒否の区別がつかない → **「断った」という事実が存在しない**
+- argo proves "a match exists," but does not prove that any notification was delivered.
+- Because hyde encrypts at the device layer, the very existence of a notification is invisible externally.
+- Silence and refusal are indistinguishable → "I declined" simply does not exist as a fact.
 
-断ったことがバレるなら誰もプールに入らない。
-**バレないから1.2億人がプールに入れる。**
-これが社会実装の決定的な条件。
+If refusals were observable, nobody would stay in the pool. **Because they are not, 120 million people can stay in.** This is the decisive condition for real-world deployment.
 
-### 国境を越えたマッチング
+### Cross-border matching
 
-各国の臓器移植ネットワークは孤立している。
-日本14,330人、米国10万人、EU6万人 — 本来1つのプールであるべきデータが
-GDPR・HIPAA・個人情報保護法の壁で分断されている。
+Each country's organ network is a silo. Japan 14,330 waiters, the United States 100,000, the EU 60,000 — data that should logically be a single pool, partitioned by GDPR, HIPAA, and the Personal Information Protection Act.
 
-niobi はデータを動かさずに国際マッチングを実現する。
+niobi realises international matching without moving the data.
 
 ```
-日本の患者 ←── argo: 適合証明 ──→ ドイツのドナー
-     │                                    │
-  データは日本から出ない          データはドイツから出ない
-     │                                    │
-     └──── 「適合する」という事実だけ流通 ────┘
+Japanese patient ←── argo: match proof ──→ German donor
+     │                                          │
+  Data never leaves Japan.          Data never leaves Germany.
+     │                                          │
+     └──── Only the fact of a match flows across ────┘
 ```
 
-#### 段階的な展開（現実的な実装パス）
+#### A realistic rollout path
 
 ```
-Layer 1: 国内プール
-  日本臓器移植ネットワーク相当。
-  まず国内の全病院データをhyde化。
-  14,330人の待機者 → 1.2億人プール。
+Layer 1: National pool
+  An equivalent of the Japan Organ Transplant Network.
+  First, bring every domestic hospital into hyde-encrypted storage.
+  14,330 waiters → 120M-person latent pool.
 
-Layer 2: 二国間協定
-  日独、日米など、既存の医療協力関係をベースに。
-  暗号化データの相互コピーを外交合意で開始。
-  各国のデータ主権は完全に維持。
+Layer 2: Bilateral agreement
+  Japan-Germany, Japan-US, grounded in existing medical cooperation.
+  Mutual copies of encrypted data, started by diplomatic agreement.
+  Each country's data sovereignty is fully preserved.
 
-Layer 3: 地域連合
-  アジア、EU、北米など。
-  地域内で暗号化プールを共有。
-  冷阻血時間の制約に合う地理的範囲。
+Layer 3: Regional union
+  Asia, EU, North America.
+  Encrypted pools shared within a region.
+  Geographic scope bounded by cold-ischaemia time.
 
-Layer 4: グローバルプール
-  全世界の暗号化データが各国にコピー。
-  どの国からでも最適マッチングを実行可能。
-  希少血液型・希少疾患でこそ威力を発揮。
+Layer 4: Global pool
+  Encrypted data from everywhere replicated into every country.
+  Any country can run optimal matching on the whole world.
+  Especially powerful for rare blood types and rare diseases.
 ```
 
-各レイヤーで技術は同一。政治的・外交的に段階を踏むだけ。
-GDPR も HIPAA も侵害しない。**法律を回避するのではなく、法律が守ろうとしているものを
-暗号で直接実現する**。
+At each layer the technology is identical. Only the political and diplomatic sequencing advances. niobi does not circumvent GDPR or HIPAA — it **delivers the thing those laws were trying to protect, directly, via cryptography**.
 
-#### コピーは無害
+#### Copies are harmless
 
-hyde で暗号化されたデータは、コピーされても読めない。
-この性質を活かし、**全世界の暗号化データを各国にコピーして配布する**。
+Data encrypted with hyde, once copied, remains unreadable. niobi leans into that property and **replicates the world's encrypted data to every participating country**.
 
 ```
-日本サーバー:   暗号化データ（全世界分のコピー）
-ドイツサーバー: 暗号化データ（全世界分のコピー）
-米国サーバー:   暗号化データ（全世界分のコピー）
+Japan server:   encrypted data (global copy)
+Germany server: encrypted data (global copy)
+US server:      encrypted data (global copy)
 ```
 
-- 各国が自国内で量子マッチングを実行できる（レイテンシなし）
-- 1国のサーバーが落ちても他が動く（単一障害点なし）
-- 自国にコピーがある = 他国のインフラに依存しない（真の主権）
-- 盗聴・ハッキングは無意味（暗号化データしか存在しない）
+- Each country runs its own quantum matching (no latency).
+- One country's server going down does not halt the others (no single point of failure).
+- Your data is on your own soil → you do not depend on foreign infrastructure (true sovereignty).
+- Eavesdropping and hacking become meaningless (only ciphertext ever exists).
 
-従来のデータ保護は「コピーを防ぐ」設計。
-hyde は **「コピーを無害にする」** 設計。守り方の次元が違う。
+Conventional data protection is designed to **prevent copying**. hyde is designed to **make copying harmless**. It is a different dimension of defence.
 
-従来のセキュリティでは冗長性はリスク — コピーが増えるほど攻撃面が広がる。
-hyde では **冗長性が増すほど攻撃が無意味になる**。
-100ヶ国にコピーがあっても、どれを盗んでも同じ暗号文。
-攻撃者にとって「どこを攻撃するか」という選択自体が消失する。
+Under traditional security, redundancy is a risk — more copies means more attack surface. Under hyde, **redundancy makes attacks progressively meaningless**. A hundred replicas in a hundred countries are all the same ciphertext. The attacker's question "where to attack" simply dissolves.
 
-臓器移植で証明できたら、同じ構造で：
-- パンデミック感染症データの国際共有
-- 国際共同治験のマッチング
-- 希少疾患の国境を超えた患者ネットワーク
+Once we prove this out for organ transplantation, the same structure applies to:
 
-すべて「データ主権と国際協調のジレンマ」で止まっていた問題。
+- Pandemic-surveillance data shared internationally
+- International co-operative clinical trials
+- Cross-border rare-disease patient networks
 
-hyde は1回実装されれば、上に載せるアプリケーションが変わるだけ。
-TCP/IP が1回実装されて HTTP も SMTP も SSH も載ったように、
-hyde の上に臓器移植も献血も治験も希少疾患も載る。
-**全国民が全世界になる。**
+These are all problems that previously stalled on "data sovereignty vs. international coordination."
 
-### 技術ロードマップ
+hyde gets implemented once; the applications on top change. Just as TCP/IP was built once and HTTP, SMTP, and SSH all rode on top, hyde becomes the substrate for organ matching, blood donation, clinical trials, and rare-disease coordination. **"Everyone in the country" becomes "everyone in the world."**
 
-- plat の CKKS FHE 実装によるスコア計算の完全暗号化
-- D-Wave 実機での大規模（100ドナー×1000レシピエント）検証
-- 国際プール構築: 日本→アジア→グローバルの段階的展開
-- 臓器移植以外への展開: 創薬データ統合、保険審査、感染症データ共有
+### Technical roadmap
 
-## ブロックチェーンの次
+- plat CKKS FHE integration for fully-encrypted score computation.
+- Validation on real D-Wave hardware at scale (100 donors × 1000 recipients).
+- International pool construction: Japan → Asia → global, staged rollout.
+- Beyond transplantation: drug-discovery data integration, insurance underwriting, infectious-disease data sharing.
 
-ブロックチェーンは「全員がコピーを持ち、全員が検証できる」ことで
-中央権威なしの信頼を実現した。しかし **全員が読める** という代償を払った。
+## The step beyond blockchain
 
-医療データ、個人情報、国家機密 — 見えてはいけないデータは
-ブロックチェーンに載せられない。これがブロックチェーンの社会実装を阻んできた壁。
+Blockchain delivered trust without a central authority by letting **everyone hold a copy and everyone verify**. It paid for that with **everyone can read**.
 
-niobi（hyde/argo/plat）は同じ構造を **不透明なまま** 実現する。
+Medical data, personal information, state secrets — data that must not be seen simply cannot live on a blockchain. That is the wall that has blocked blockchain's arrival in real-world deployment.
 
-| | ブロックチェーン | niobi |
+niobi (via hyde / argo / plat) delivers the same structure **while remaining opaque**.
+
+|  | Blockchain | niobi |
 |---|---|---|
-| 全員がコピーを持つ | ○ | ○ |
-| 改ざん検知 | ○（透明性で） | ○（ZKPで） |
-| 中央権威不要 | ○ | ○ |
-| プライバシー | × 全員が読める | **○ 誰も読めない** |
+| Everyone holds a copy | ✓ | ✓ |
+| Tamper detection | ✓ (via transparency) | ✓ (via ZKP) |
+| No central authority required | ✓ | ✓ |
+| Privacy | ✗ everyone reads | **✓ nobody reads** |
 
-透明性は信頼を作る手段であって目的ではなかった。
-目的は「改ざんされていないこと」の証明。
-argo の ZKP はそれを **中身を見せずに** 達成する。
+Transparency was a means to trust, not the goal itself. The goal was "proof of non-alteration." argo's ZKP achieves that **without showing the contents**.
 
-## ライセンス
+## Related
 
-MIT
+- **[vohu](https://github.com/Ryujiyasu/vohu)** — sibling application on the same primitive. Privacy-preserving voting for World ID-verified humans: Paillier-encrypted ballots, homomorphic tally, 2-of-3 threshold decryption. Voting is the cleanest surface for the primitive; niobi (medical matching) is the second surface. Different domains, same crypto substrate (hyde + plat + argo).
+- [hyde](https://gitlab.com/Ryujiyasu/hyde) — TPM + PQC device-binding primitive.
+- [plat](https://gitlab.com/Ryujiyasu/plat) — FHE / GPU-accelerated private computation.
+- [argo](https://gitlab.com/Ryujiyasu/argo) — zero-knowledge proof wrapper.
 
-## AI活用方針
+## License
 
-本プロジェクトでは、コード生成・文章作成にAI（Claude）を補助的に活用している。
-方針の確定、技術の確からしさの検証、データへの責任は人間が担保する。
+MIT.
+
+## AI assistance policy
+
+This project uses AI (Claude) for code generation and writing, as a supporting tool. Final decisions on direction, verification of technical correctness, and responsibility for the data remain with the human author.
