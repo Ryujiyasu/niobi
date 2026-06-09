@@ -568,6 +568,354 @@ fn random_bt(rng: &mut StdRng) -> BloodType {
     }
 }
 
+// ===========================================================================
+//  Lives-saved formulation (救命数主指標)
+//
+//  The score-sum objective above is *separable*: a donor's K organs go to the
+//  K highest-scoring patients regardless of method, so QUBO ≈ greedy on score.
+//  The clinically meaningful objective is the number of patients SAVED — and a
+//  combined-transplant patient (e.g. SLK = liver+kidney) is saved ONLY if they
+//  receive ALL needed organs. A half-transplant saves nobody and *wastes* the
+//  organ that was committed. Uncoordinated per-organ (greedy) allocation strands
+//  combined patients and wastes organs; global optimization (QUBO/annealing)
+//  avoids the waste. That gap is the genuine, NP-hard quantum-utility signal.
+// ===========================================================================
+
+/// Summary of an allocation in lives terms.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct LivesSummary {
+    /// Patients who received their COMPLETE needed-organ set.
+    pub lives: usize,
+    pub lives_single: usize,
+    pub lives_combined: usize,
+    /// Combined patients who received SOME but not all needed organs (stranded).
+    pub stranded_combined: usize,
+    /// Organs committed to patients who were NOT fully served (pure waste).
+    pub wasted_organs: usize,
+    /// Total organs placed.
+    pub organs_used: usize,
+}
+
+/// Count lives saved: a patient is saved iff every organ in `needed_organs`
+/// was assigned to them. Organs given to partially-served patients are wasted.
+pub fn count_lives_saved(
+    assignments: &[(Organ, usize, f64)],
+    patients: &[MultiOrganPatient],
+) -> LivesSummary {
+    use std::collections::{HashMap, HashSet};
+    let mut got: HashMap<usize, HashSet<Organ>> = HashMap::new();
+    for &(organ, pid, _) in assignments {
+        got.entry(pid).or_default().insert(organ);
+    }
+    let mut s = LivesSummary {
+        organs_used: assignments.len(),
+        ..Default::default()
+    };
+    for (&pid, organs_got) in &got {
+        let patient = &patients[pid];
+        let saved = patient.needed_organs.iter().all(|o| organs_got.contains(o));
+        if saved {
+            s.lives += 1;
+            if patient.needs_combined {
+                s.lives_combined += 1;
+            } else {
+                s.lives_single += 1;
+            }
+        } else {
+            s.wasted_organs += organs_got.len();
+            if patient.needs_combined {
+                s.stranded_combined += 1;
+            }
+        }
+    }
+    s
+}
+
+/// Build the lives-maximizing QUBO (all-or-nothing for combined patients).
+///
+/// - Single patient (1 organ): linear reward −`w_life` on its organ var → 1 life.
+/// - Combined patient (organs {A,B}): each var carries reward 0; a pairwise
+///   bonus −`w_life` on (x_A,x_B) realizes the life ONLY when both are assigned.
+///   Assigning one organ alone yields no reward but consumes the organ → the
+///   minimizer prefers giving that organ to a single patient (avoids stranding).
+/// - `score_eps`·organ_score is a tiny tiebreaker toward better medical matches.
+/// - `penalty` (≫ w_life) enforces each organ type → at most one patient.
+pub fn build_lives_qubo(
+    donor: &MultiOrganDonor,
+    patients: &[MultiOrganPatient],
+    organs: &[Organ],
+    w_life: f64,
+    score_eps: f64,
+    penalty: f64,
+) -> (QuboProblem, Vec<(Organ, usize)>) {
+    let mut var_map: Vec<(Organ, usize)> = Vec::new();
+    let mut linear: Vec<f64> = Vec::new();
+
+    for &organ in organs {
+        for (i, patient) in patients.iter().enumerate() {
+            if !patient.needed_organs.contains(&organ) {
+                continue;
+            }
+            let s = organ_score(donor, patient, &organ);
+            if s <= 0.0 {
+                continue;
+            }
+            let life_lin = if patient.needs_combined { 0.0 } else { -w_life };
+            linear.push(life_lin - score_eps * s);
+            var_map.push((organ, i));
+        }
+    }
+
+    let n_vars = linear.len();
+    let mut quadratic: Vec<(usize, usize, f64)> = Vec::new();
+
+    for a in 0..n_vars {
+        for b in (a + 1)..n_vars {
+            let (org_a, pa) = var_map[a];
+            let (org_b, pb) = var_map[b];
+            if org_a == org_b {
+                // same organ type → at most one recipient
+                quadratic.push((a, b, penalty));
+            } else if pa == pb && patients[pa].needs_combined {
+                // completion bonus: combined patient saved only if both organs assigned
+                quadratic.push((a, b, -w_life));
+            }
+        }
+    }
+
+    let labels = var_map.iter().map(|&(o, p)| (o.index(), p)).collect();
+    (
+        QuboProblem {
+            n_vars,
+            linear,
+            quadratic,
+            labels,
+        },
+        var_map,
+    )
+}
+
+/// Solve the lives-maximizing QUBO via simulated annealing.
+pub fn solve_lives_qubo(
+    donor: &MultiOrganDonor,
+    patients: &[MultiOrganPatient],
+    organs: &[Organ],
+    w_life: f64,
+    score_eps: f64,
+    penalty: f64,
+    sweeps: usize,
+    seed: u64,
+) -> Vec<(Organ, usize, f64)> {
+    let (qubo, var_map) = build_lives_qubo(donor, patients, organs, w_life, score_eps, penalty);
+    if qubo.n_vars == 0 {
+        return vec![];
+    }
+    let sol = simulated_annealing(&qubo, sweeps, 10.0, 0.01, seed);
+    let mut out = Vec::new();
+    for (idx, &on) in sol.assignment.iter().enumerate() {
+        if on {
+            let (organ, pid) = var_map[idx];
+            out.push((organ, pid, organ_score(donor, &patients[pid], &organ)));
+        }
+    }
+    out
+}
+
+/// Uncoordinated per-organ (greedy) allocation — the realistic baseline.
+///
+/// Each organ type is assigned independently to its highest-scoring eligible
+/// patient. A patient may receive several organ types, but the lists are not
+/// coordinated, so a combined patient who tops one list rarely tops the other →
+/// stranded → organ wasted. This mirrors list-by-list allocation practice.
+pub fn solve_independent_lives(
+    donor: &MultiOrganDonor,
+    patients: &[MultiOrganPatient],
+    organs: &[Organ],
+) -> Vec<(Organ, usize, f64)> {
+    use std::collections::{HashMap, HashSet};
+    let mut assignments = Vec::new();
+    let mut patient_got: HashMap<usize, HashSet<Organ>> = HashMap::new();
+
+    for &organ in organs {
+        let mut best_idx = None;
+        let mut best = 0.0f64;
+        for (i, patient) in patients.iter().enumerate() {
+            if !patient.needed_organs.contains(&organ) {
+                continue;
+            }
+            if patient_got.get(&i).map_or(false, |s| s.contains(&organ)) {
+                continue;
+            }
+            let s = organ_score(donor, patient, &organ);
+            if s > best {
+                best = s;
+                best_idx = Some(i);
+            }
+        }
+        if let Some(idx) = best_idx {
+            assignments.push((organ, idx, best));
+            patient_got.entry(idx).or_default().insert(organ);
+        }
+    }
+    assignments
+}
+
+/// Lives-aware greedy: assign each organ to the best SINGLE-organ patient who
+/// needs it (ignoring combined patients); only fall back to a combined patient
+/// if no single needs the organ. This is the smart, separable heuristic — if it
+/// matches QUBO, the single-donor lives objective has NO genuine coupling and
+/// thus NO quantum utility. Used to falsify the quantum-advantage claim.
+pub fn solve_singles_first(
+    donor: &MultiOrganDonor,
+    patients: &[MultiOrganPatient],
+    organs: &[Organ],
+) -> Vec<(Organ, usize, f64)> {
+    use std::collections::{HashMap, HashSet};
+    let mut assignments = Vec::new();
+    let mut patient_got: HashMap<usize, HashSet<Organ>> = HashMap::new();
+
+    for &organ in organs {
+        // Prefer the best single-organ patient; fall back to combined.
+        let mut best_idx = None;
+        let mut best = 0.0f64;
+        let mut best_is_single = false;
+        for (i, patient) in patients.iter().enumerate() {
+            if !patient.needed_organs.contains(&organ) {
+                continue;
+            }
+            if patient_got.get(&i).map_or(false, |s| s.contains(&organ)) {
+                continue;
+            }
+            let s = organ_score(donor, patient, &organ);
+            if s <= 0.0 {
+                continue;
+            }
+            let is_single = !patient.needs_combined;
+            // singles strictly preferred over combined; within a class, higher score wins
+            let better = match (is_single, best_is_single) {
+                (true, false) => true,
+                (false, true) => false,
+                _ => s > best,
+            };
+            if best_idx.is_none() || better {
+                best = s;
+                best_idx = Some(i);
+                best_is_single = is_single;
+            }
+        }
+        if let Some(idx) = best_idx {
+            assignments.push((organ, idx, best));
+            patient_got.entry(idx).or_default().insert(organ);
+        }
+    }
+    assignments
+}
+
+/// Exact maximum lives via brute force (small instances only, for validation).
+/// Returns None if the variable count exceeds `max_vars` (too large to enumerate).
+pub fn exact_max_lives(
+    donor: &MultiOrganDonor,
+    patients: &[MultiOrganPatient],
+    organs: &[Organ],
+    max_vars: usize,
+) -> Option<usize> {
+    let (qubo, var_map) = build_lives_qubo(donor, patients, organs, 1.0, 0.0, 1.0);
+    let n = var_map.len();
+    if n > max_vars || n > 26 {
+        return None;
+    }
+    let mut best = 0usize;
+    for mask in 0u64..(1u64 << n) {
+        // feasibility: no organ type used twice
+        let mut organ_used: Vec<Organ> = Vec::new();
+        let mut feasible = true;
+        let mut chosen: Vec<(Organ, usize, f64)> = Vec::new();
+        for idx in 0..n {
+            if mask & (1u64 << idx) != 0 {
+                let (organ, pid) = var_map[idx];
+                if organ_used.contains(&organ) {
+                    feasible = false;
+                    break;
+                }
+                organ_used.push(organ);
+                chosen.push((organ, pid, 0.0));
+            }
+        }
+        if !feasible {
+            continue;
+        }
+        let lives = count_lives_saved(&chosen, patients).lives;
+        if lives > best {
+            best = lives;
+        }
+    }
+    let _ = qubo;
+    Some(best)
+}
+
+/// Generate a lives-benchmark scenario. Combined-transplant patients are
+/// sicker (high MELD), matching clinical reality (e.g. SLK ⇐ hepatorenal
+/// syndrome) — which makes them top their first organ list and thus exposes
+/// the stranding failure of uncoordinated allocation.
+pub fn generate_lives_scenario(
+    n_per_organ: usize,
+    seed: u64,
+    params: &ScenarioParams,
+) -> (MultiOrganDonor, Vec<MultiOrganPatient>) {
+    let mut rng = StdRng::seed_from_u64(seed);
+
+    let donor = MultiOrganDonor {
+        blood_type: random_bt(&mut rng),
+        body_weight: rng.gen_range(55.0..85.0),
+        liver_volume: rng.gen_range(1200.0..1700.0),
+        region_km: rng.gen_range(0.0..200.0),
+    };
+
+    let mut patients = Vec::new();
+    let all_organs = Organ::all();
+
+    for (organ_idx, &organ) in all_organs.iter().enumerate() {
+        for j in 0..n_per_organ {
+            let needs_combined = match organ {
+                Organ::Liver => rng.gen_range(0.0..1.0) < params.slk_rate,
+                Organ::Heart => rng.gen_range(0.0..1.0) < params.heart_lung_rate,
+                Organ::Pancreas => rng.gen_range(0.0..1.0) < params.spk_rate,
+                _ => false,
+            };
+
+            let mut needed = vec![organ];
+            if needs_combined {
+                match organ {
+                    Organ::Liver => needed.push(Organ::KidneyL),
+                    Organ::Heart => needed.push(Organ::LungL),
+                    Organ::Pancreas => needed.push(Organ::KidneyR),
+                    _ => {}
+                }
+            }
+
+            // Combined patients are sicker → higher MELD/priority.
+            let meld = if needs_combined {
+                rng.gen_range(32.0..40.0)
+            } else {
+                rng.gen_range(6.0..34.0)
+            };
+
+            patients.push(MultiOrganPatient {
+                id: organ_idx * n_per_organ + j,
+                blood_type: random_bt(&mut rng),
+                body_weight: rng.gen_range(45.0..95.0),
+                meld_score: meld,
+                waiting_days: rng.gen_range(30.0..3000.0),
+                region_km: rng.gen_range(0.0..200.0),
+                needed_organs: needed,
+                needs_combined,
+            });
+        }
+    }
+
+    (donor, patients)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

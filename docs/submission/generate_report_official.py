@@ -380,6 +380,10 @@ def main():
             r = h.add_run(title); _apply_jp(r, size=Pt(13), bold=True)
             last = add_formatted_content(doc, h, body)
 
+    # Anonymize document metadata (template carries 作成者 'Hiroki Okuda (JP)').
+    doc.core_properties.author = ""
+    doc.core_properties.last_modified_by = ""
+
     doc.save(str(OUTPUT))
     print(f"Saved: {OUTPUT}")
     print(f"Filled sections: {len(tasks)}")

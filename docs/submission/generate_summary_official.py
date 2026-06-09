@@ -25,10 +25,10 @@ OUTPUT = BASE / "summary_official.pptx"
 JP = "ＭＳ Ｐゴシック"
 BLACK = RGBColor(0x1A, 0x1A, 0x1A)
 
-# Provisional cover (blank NAME/TEAM after 事務局 confirms anonymity rule)
+# 概要版は完全匿名（事務局確認済: 氏名欄は削除）。氏名・団体名は空欄にする。
 COVER = {
-    "応募代表者氏名": "安河内 竜二",
-    "チーム名": "M2Labo",
+    "応募代表者氏名": "",
+    "チーム名": "",
     "選択課題ID": "Q-2",
     "選択課題名": "創薬エコシステムの強化に向けた医療データ共有アプリケーション・アルゴリズムの開発",
     "提案名": "Niobi — プライバシー保護型臓器移植マッチングの分散最適化",
@@ -42,7 +42,7 @@ S2_LEFT = [
     ("国内 — 高粒度データ(HLA完全型等)が各施設に滞留。追加収集に再同意が必要で制度的摩擦", 1),
     ("国際 — GDPR/HIPAA/APPIにより越境医療データ共有が法的に不可能", 1),
     ("潜在ドナー — 意思表示の安全な登録・管理基盤が不在", 1),
-    ("脳死ドナー1人→最大8臓器の**多臓器同時割当**は臓器間相互依存・複合移植により多次元マッチング(k≥3でNP困難)。古典の多項式時間解なし", 0),
+    ("**割当(単一/多臓器)は古典で最適に解ける**が、直接マッチング不成立の不適合ペアの**交換(2-/3-way cycle-cover)**は頂点素な最大重み集合パッキング=NP困難。貪欲は構造的に劣り大域最適化が要る", 0),
 ]
 S2_RIGHT = [
     ("「個人情報を保護しながら共有する」のではなく**「共有データから個人情報という性質を消す」**", 0),
@@ -56,20 +56,20 @@ S3 = [
     ("(1) 計算層 — plat(Threshold FHE + Bootstrapping)で暗号状態のまま適合率計算。秘密鍵はt-of-n閾値分割(独立機関のTEE内)", 0),
     ("(2) 保護層 — hyde(PQC/ML-KEM-768)で個人情報(氏名・連絡先)を暗号学的に分離。鍵はTPMに紐づき個人が保管", 0),
     ("(3) 検証層 — argo(ZKP)で計算の正当性を中身非開示のまま証明", 0),
-    ("(4) 最適化層 — QUBO定式化で多臓器同時割当の組合せ最適化", 0),
+    ("(4) 最適化層 — QUBO定式化で交換cycle-cover(NP困難)を最適化(多臓器割当は適合スコアの応用層)", 0),
     ("**全構成要素は今日の技術で実現**(NIST標準PQC／FHE実装＋GPU加速／古典QUBO)。将来の量子を前提としない。production_8192で50.91ms/ペア実測、MKFHE bootstrappingで異鍵暗号文の比較を復号なしで実証", 0),
 ]
 S4 = [
     ("**評価指標:** マッチ数・適合スコア・計算時間を既存手法と比較", 0),
     ("**ベースライン(単一臓器二部マッチング):** Greedy法 / Hungarian法(O(N³)最適解) / Brute Force(N≤8で正解一致を検証)", 0),
-    ("**多臓器同時割当:** OPTN/SRTR 2023の文献値でパラメータを事前固定(SLK 7.9%/SPK 79.2%/心肺1.3%、脳死130件/年)。Independent greedy vs QUBO joint optimizationを比較", 0),
+    ("**交換cycle-cover:** ランダム不適合プールで貪欲サイクル検出 vs QUBO(焼きなまし) vs 厳密最適を移植数で比較(各サイズ8シード、2-/3-way)。多臓器割当はOPTN/SRTR 2023文献値で適合スコアを検証", 0),
     ("**暗号コスト:** plat crateでkeygen/encrypt/score/decryptを実測(test_small / research_2048 / production_8192)", 0),
     ("**GPU:** CUDA/wgpu NTTバックエンドをRTX 3090で実測", 0),
     ("**実装:** Rust(--release)。D-Wave SimulatedAnnealingSamplerでも同等結果を再現確認", 0),
 ]
 S5_LEFT = [
     ("**単一臓器:** Hungarianが全スケールで最適、QUBO(焼きなまし)は2-6%劣る(正直な評価)。N=200でGreedy比+12マッチ", 0),
-    ("**多臓器(核心):** スコア差は±数%で非有意だが質的差は決定的。Independent greedyは複合移植患者への完全割当が全シナリオ**0件**、QUBO joint最適化は**2-4人**に両臓器を割当", 0),
+    ("**多臓器(負の結果):** 救命数では分離可能=smart greedy=QUBO=厳密最適、量子優位なし。**交換cycle-cover(本命):** QUBOが貪欲に**8/8勝利**・厳密最適に一致・差は規模で拡大(+1.5→+3.8移植)", 0),
     ("**FHE実測:** composite_score 21µs、full pipeline **50.91ms/ペア**(production_8192)", 0),
     ("**スケール:** 全臓器スコアリング国内11分→**GPU 48秒**、全世界18分(冷阻血時間内)", 0),
     ("**GPU:** N=8192でCUDA **14x**高速化(暗号安全性は不変)", 0),
@@ -77,7 +77,7 @@ S5_LEFT = [
 S5_RIGHT = [
     ("量子の有用性は計算速度ではなく、**社会実装の前提条件(プライバシー保護)と組み合わせて初めて意味を持つ**", 0),
     ("量子最適化だけでは解けない — 病院がデータを出さないから。hyde/argo/platで初めて量子に渡すデータが揃う", 0),
-    ("単一臓器はHungarianで十分だが、複合移植・多臓器同時割当ではIndependent手法が**構造的に不可能** → QUBOが必要", 0),
+    ("割当(単一/多臓器)は古典で十分。**真にNP困難な交換cycle-coverでQUBOが必要** — 貪欲は容易な2-wayを取り優れた3-wayを潰す", 0),
     ("MKFHE(理論最強)はKEPスケールで非両立と判明 → **Threshold FHE + hyde 2層分離**へ設計転換", 0),
 ]
 S6 = [
@@ -85,15 +85,15 @@ S6 = [
     ("現在のNISQ/アニーリングでNiobiの基本構造は動作。全構成要素は今日存在する技術", 0),
     ("FTQC(2030-2040)完成で: 量子実機のQUBO求解がシミュレータを凌駕／N≥10,000の厳密解が到達可能", 0),
     ("**4層展開:** 国内プール(JOTN統合) → 二国間(日米独, Threshold FHE閾値を国際機関で構成) → 地域連合(アジア・EU) → グローバルプール", 0),
-    ("遺伝学展開(80億×80億のペア比較)では量子が「あれば速い」ではなく**「ないと解けない」前提条件**になる", 0),
+    ("遺伝学展開(80億規模)では最適化が組み合わせ的に爆発し古典厳密解が破綻、**量子アニーリングがスケーラブルな求解経路**になる(forward-looking)", 0),
     ("**ロードマップ:** 2026原理検証／2028パイロット／2029国内／2030二国間／2040グローバル／2050全分野", 0),
 ]
 # Slide 7: 5 short boxes (keep to ~2 lines each)
 S7_QUANTUM = [
-    ("多臓器同時割当(k≥3でNP困難)でQUBOの優位性が発現。複合移植患者への質的対応(Independent 0件 vs QUBO 2-4人)。遺伝学展開では量子が**必要条件**", 0),
+    ("**交換cycle-cover(NP困難・APX困難)でQUBOの優位性が発現**(貪欲に8/8勝・厳密最適一致・差は規模で拡大)。多臓器割当は分離可能で量子優位なし(正直な負の結果)", 0),
 ]
 S7_NOVELTY = [
-    ("**計算層と保護層の分離原則**(計算層を破っても個人情報に到達不能)／MKFHE限界の特定→Threshold FHE+hyde転換／FHE・MKFHE bootstrapping Rust実装(GPU14x)／TEE認証ゲート型暗号化／Threshold FHE+ZKP+PQC+TEE+多臓器QUBO統合", 0),
+    ("**計算層と保護層の分離原則**(計算層を破っても個人情報に到達不能)／MKFHE限界の特定→Threshold FHE+hyde転換／FHE・MKFHE bootstrapping Rust実装(GPU14x)／TEE認証ゲート型暗号化／Threshold FHE+ZKP+PQC+TEE+交換cycle-cover QUBO統合", 0),
 ]
 S7_CONTRIB = [
     ("Q-2の根本障壁=医療データ共有のプライバシー問題をFHEで解消し量子最適化を適用。病院も国家も鍵に関与せず**個人のデータ主権を暗号学的に保証**。創薬(治験データ企業横断共有・患者リクルート最適化・規制連携)へ同一基盤で展開", 0),
@@ -231,7 +231,7 @@ def build_slide3_diagram(slide):
          "計算の正当性を中身非開示のまま証明", TEAL)
     _arrow(slide, cx, 4.45, 0.16)
     _box(slide, lx, 4.63, lw, 0.6, "(4) 最適化層 — QUBO",
-         "多臓器同時割当の組合せ最適化（k≥3でNP困難、Hungarian不可）", GREEN)
+         "交換cycle-cover最適化（NP困難・集合パッキング）。多臓器割当は適合スコア応用層", GREEN)
     _arrow(slide, cx, 5.27, 0.16)
     _box(slide, lx, 5.45, lw, 0.45, "最適マッチ結果（1ドナーから最大8人を救命）", "", GRAY, tsz=11)
 
@@ -290,7 +290,7 @@ def build_comparison_slide(prs, layout):
         ("データ共有の仕組み", "全員が平文を閲覧", "勾配・重みのみ共有", "TEE内で平文に復元", "データは出るが鍵なしでは読めない"),
         ("プライバシー保護", "✕ 公開台帳", "△ 勾配から復元リスク", "△ ハード信頼・サイドチャネル", "◎ FHE＋ZKP＋PQC"),
         ("改ざん検知・正当性", "◎ 台帳で保証", "✕", "△ リモート認証", "◎ argo(ZKP)＋台帳監査"),
-        ("組合せ最適化", "✕", "△ 限定的", "○", "◎ QUBO(多臓器同時)"),
+        ("組合せ最適化", "✕", "△ 限定的", "○", "◎ QUBO(交換cycle-cover)"),
         ("鍵管理主権", "各自が保持", "サーバに集約", "ハード製造者依存", "個人(TPM)＋t-of-n閾値"),
     ]
     nrow, ncol = len(rows) + 1, len(cols)
@@ -324,10 +324,9 @@ def build_benchmark_slide(prs, layout):
     from pptx.enum.chart import XL_CHART_TYPE, XL_LEGEND_POSITION
     slide = _new_slide(prs, layout, "検証結果 — ベンチマークと量子有用性")
     cd = CategoryChartData()
-    cd.categories = ["N=20", "N=30", "N=50", "N=75", "N=100"]
-    cd.add_series("Greedy", (19, 23, 38, 67, 84))
-    cd.add_series("Hungarian(最適)", (20, 26, 39, 75, 84))
-    cd.add_series("QUBO(焼きなまし)", (20, 26, 39, 74, 84))
+    cd.categories = ["8", "12", "16", "20", "30"]
+    cd.add_series("貪欲 cycle検出", (5.2, 7.8, 11.2, 13.8, 22.5))
+    cd.add_series("QUBO(焼きなまし)", (6.8, 10.0, 13.9, 17.4, 26.2))
     gframe = slide.shapes.add_chart(XL_CHART_TYPE.COLUMN_CLUSTERED,
                                     Inches(0.5), Inches(1.5), Inches(6.7), Inches(4.0), cd)
     chart = gframe.chart
@@ -335,7 +334,7 @@ def build_benchmark_slide(prs, layout):
     chart.legend.position = XL_LEGEND_POSITION.BOTTOM
     chart.legend.include_in_layout = False
     chart.has_title = True
-    chart.chart_title.text_frame.text = "単一臓器マッチング: 手法別マッチ数"
+    chart.chart_title.text_frame.text = "交換cycle-cover: 移植数（不適合ペア数N別, 8シード平均）"
     for s in chart.plots[0].series:
         pass
     try:
@@ -346,15 +345,15 @@ def build_benchmark_slide(prs, layout):
         pass
     cap = slide.shapes.add_textbox(Inches(0.5), Inches(5.5), Inches(6.7), Inches(1.4))
     tf = cap.text_frame; tf.word_wrap = True
-    for txt, bold in [("単一臓器ではHungarian(O(N³))が最適、QUBOはほぼ同等で優位性なし（正直な結果）。", False),
-                      ("量子の真価は多臓器同時割当に現れる ↓", True)]:
+    for txt, bold in [("交換cycle-cover(NP困難)でQUBOは貪欲を全インスタンス(8/8)で上回り、厳密解可能域で厳密最適に一致。差は規模で拡大。", True),
+                      ("単一臓器・多臓器割当は古典で最適＝量子優位なし（正直な切り分け）→", False)]:
         p = tf.add_paragraph() if tf.paragraphs[0].runs else tf.paragraphs[0]
         r = p.add_run(); r.text = txt; r.font.size = Pt(10.5); r.font.name = JP; r.font.bold = bold
         r.font.color.rgb = RGBColor(0x33, 0x33, 0x33)
 
     # right panel callouts
     panels = [
-        ("多臓器同時割当（核心）", "複合移植患者への両臓器割当：Independent greedy 0件 / QUBO 2〜4人/シナリオ（OPTN/SRTR 2023文献値で事前固定）。k≥3でNP困難、Hungarian適用不可", RGBColor(0x3A, 0x6B, 0x35)),
+        ("割当は分離可能（量子は不要）", "単一臓器=Hungarian最適。多臓器同時割当も救命数では smart greedy=QUBO=厳密最適。当初の複合移植優位仮説はベンチで否定（正直な負の結果）", RGBColor(0x6B, 0x6B, 0x6B)),
         ("FHE暗号計算（実測）", "composite_score 21µs ／ full pipeline 50.91ms/ペア（production_8192, N=8192）。MKFHE bootstrappingで異鍵暗号文の比較を復号なしで実証", RGBColor(0x2E, 0x5B, 0x88)),
         ("スケール", "全臓器スコアリング 国内11分 → GPU 48秒、全世界18分（冷阻血時間内）。N=8192でCUDA 14x高速化", RGBColor(0x4A, 0x90, 0xA4)),
     ]
@@ -446,6 +445,11 @@ def main():
 
     # ---- Free slides 8-10 ----
     add_free_slides(prs)
+
+    # ---- Anonymize document metadata (template carries 作成者 'Hiroki Okuda (JP)') ----
+    cp = prs.core_properties
+    cp.author = ""
+    cp.last_modified_by = ""
 
     prs.save(str(OUTPUT))
     print(f"Saved: {OUTPUT}  ({len(slides)} slides)")
