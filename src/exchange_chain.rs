@@ -20,7 +20,10 @@
 //! argo proves each link in the chain is compatible.
 //! The chain is assembled from anonymous compatibility proofs.
 
+use crate::annealing::{simulated_annealing, QuboProblem};
 use crate::scoring::{self, BloodType};
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 
 /// A donor-recipient pair registered for exchange.
 /// The donor is willing to give, but incompatible with their
@@ -196,6 +199,266 @@ pub fn find_exchange_chains(
     chains
 }
 
+// ===========================================================================
+//  Maximum-weight cycle-cover (the genuinely NP-hard exchange problem).
+//
+//  Unlike single-donor organ ASSIGNMENT (which is separable — a smart greedy
+//  reaches the optimum), selecting a maximum set of vertex-disjoint exchange
+//  cycles is weighted set-packing: NP-hard and APX-hard. Greedy cycle-picking
+//  is provably suboptimal — taking an easy 2-way can block a better 3-way that
+//  shares a pair. This is why real kidney-exchange programs solve it with global
+//  optimization (ILP today; quantum annealing as the scalable hardware path),
+//  and it is where QUBO genuinely beats greedy.
+// ===========================================================================
+
+/// An enumerated feasible exchange cycle (2-way or 3-way).
+#[derive(Debug, Clone)]
+pub struct Cycle {
+    /// Pair indices, in cycle order (i→j→…→i).
+    pub pairs: Vec<usize>,
+    /// Sum of edge compatibility scores around the cycle.
+    pub weight: f64,
+    /// Transplants enabled = number of pairs in the cycle.
+    pub transplants: usize,
+}
+
+/// Enumerate all feasible 2- and 3-cycles (up to `max_len`) in the directed
+/// compatibility graph. 3-cycles are canonicalized by smallest-index-first so
+/// each rotation is listed once (both directions are kept — they use different
+/// edges and have different weights).
+pub fn enumerate_cycles(graph: &[Vec<f64>], max_len: usize) -> Vec<Cycle> {
+    let n = graph.len();
+    let mut cycles = Vec::new();
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if graph[i][j] > 0.0 && graph[j][i] > 0.0 {
+                cycles.push(Cycle {
+                    pairs: vec![i, j],
+                    weight: graph[i][j] + graph[j][i],
+                    transplants: 2,
+                });
+            }
+        }
+    }
+    if max_len >= 3 {
+        for i in 0..n {
+            for j in 0..n {
+                if j == i || graph[i][j] <= 0.0 {
+                    continue;
+                }
+                for k in 0..n {
+                    if k == i || k == j {
+                        continue;
+                    }
+                    // canonical: i is the smallest index in the cycle
+                    if i < j && i < k && graph[j][k] > 0.0 && graph[k][i] > 0.0 {
+                        cycles.push(Cycle {
+                            pairs: vec![i, j, k],
+                            weight: graph[i][j] + graph[j][k] + graph[k][i],
+                            transplants: 3,
+                        });
+                    }
+                }
+            }
+        }
+    }
+    cycles
+}
+
+/// Build the set-packing QUBO over enumerated cycles.
+/// Objective: maximize Σ (`life_weight`·transplants + `score_eps`·weight).
+/// Constraint: two cycles sharing a pair cannot both be selected (penalty).
+pub fn build_cycle_cover_qubo(
+    cycles: &[Cycle],
+    n_pairs: usize,
+    life_weight: f64,
+    score_eps: f64,
+    penalty: f64,
+) -> QuboProblem {
+    let m = cycles.len();
+    let mut linear = Vec::with_capacity(m);
+    for c in cycles {
+        let w = life_weight * c.transplants as f64 + score_eps * c.weight;
+        linear.push(-w);
+    }
+
+    let mut pair_cycles: Vec<Vec<usize>> = vec![Vec::new(); n_pairs];
+    for (ci, c) in cycles.iter().enumerate() {
+        for &p in &c.pairs {
+            pair_cycles[p].push(ci);
+        }
+    }
+
+    use std::collections::HashSet;
+    let mut seen: HashSet<(usize, usize)> = HashSet::new();
+    let mut quadratic = Vec::new();
+    for cs in &pair_cycles {
+        for a in 0..cs.len() {
+            for b in (a + 1)..cs.len() {
+                let key = if cs[a] < cs[b] { (cs[a], cs[b]) } else { (cs[b], cs[a]) };
+                if seen.insert(key) {
+                    quadratic.push((key.0, key.1, penalty));
+                }
+            }
+        }
+    }
+
+    let labels = (0..m).map(|i| (i, 0)).collect();
+    QuboProblem { n_vars: m, linear, quadratic, labels }
+}
+
+/// Result of a cycle-cover solve.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct CoverResult {
+    pub transplants: usize,
+    pub weight: f64,
+    pub cycles_selected: usize,
+}
+
+/// Decode a 0/1 cycle selection into a feasible disjoint cover (repairs any
+/// residual conflict by keeping higher-value cycles first — only ever lowers
+/// the QUBO's reported value, never inflates it).
+fn decode_cover(cycles: &[Cycle], selected: &[usize], n_pairs: usize) -> CoverResult {
+    let mut order: Vec<usize> = selected.to_vec();
+    order.sort_by(|&a, &b| {
+        cycles[b]
+            .transplants
+            .cmp(&cycles[a].transplants)
+            .then(cycles[b].weight.partial_cmp(&cycles[a].weight).unwrap())
+    });
+    let mut used = vec![false; n_pairs];
+    let mut r = CoverResult::default();
+    for ci in order {
+        if cycles[ci].pairs.iter().any(|&p| used[p]) {
+            continue;
+        }
+        for &p in &cycles[ci].pairs {
+            used[p] = true;
+        }
+        r.transplants += cycles[ci].transplants;
+        r.weight += cycles[ci].weight;
+        r.cycles_selected += 1;
+    }
+    r
+}
+
+/// Solve maximum-weight cycle cover via QUBO + simulated annealing.
+#[allow(clippy::too_many_arguments)]
+pub fn solve_cycle_cover_qubo(
+    pairs: &[ExchangePair],
+    max_len: usize,
+    life_weight: f64,
+    score_eps: f64,
+    penalty: f64,
+    sweeps: usize,
+    seed: u64,
+) -> CoverResult {
+    let graph = build_compatibility_graph(pairs);
+    let cycles = enumerate_cycles(&graph, max_len);
+    if cycles.is_empty() {
+        return CoverResult::default();
+    }
+    let qubo = build_cycle_cover_qubo(&cycles, pairs.len(), life_weight, score_eps, penalty);
+    let sol = simulated_annealing(&qubo, sweeps, 10.0, 0.01, seed);
+    let selected: Vec<usize> = sol
+        .assignment
+        .iter()
+        .enumerate()
+        .filter(|(_, &v)| v)
+        .map(|(i, _)| i)
+        .collect();
+    decode_cover(&cycles, &selected, pairs.len())
+}
+
+/// Greedy baseline (existing `find_exchange_chains`), reported in transplants.
+pub fn greedy_cover(pairs: &[ExchangePair], max_len: usize) -> CoverResult {
+    let chains = find_exchange_chains(pairs, max_len);
+    CoverResult {
+        transplants: chains.iter().map(|c| c.chain_length).sum(),
+        weight: chains.iter().map(|c| c.total_score).sum(),
+        cycles_selected: chains.len(),
+    }
+}
+
+/// Exact maximum-transplant cycle cover via branch-and-bound (small pools only).
+/// Returns None if the cycle count exceeds `max_cycles` or pools exceed 64 pairs.
+pub fn exact_cover(pairs: &[ExchangePair], max_len: usize, max_cycles: usize) -> Option<CoverResult> {
+    let graph = build_compatibility_graph(pairs);
+    let cycles = enumerate_cycles(&graph, max_len);
+    let n = pairs.len();
+    if cycles.len() > max_cycles || n > 64 {
+        return None;
+    }
+    // Precompute pair-bitmask per cycle.
+    let masks: Vec<u64> = cycles
+        .iter()
+        .map(|c| c.pairs.iter().fold(0u64, |m, &p| m | (1u64 << p)))
+        .collect();
+    let total_t: usize = cycles.iter().map(|c| c.transplants).sum();
+
+    let mut best = CoverResult::default();
+    fn dfs(
+        idx: usize,
+        used: u64,
+        cur: CoverResult,
+        remaining_t: usize,
+        cycles: &[Cycle],
+        masks: &[u64],
+        best: &mut CoverResult,
+    ) {
+        if cur.transplants > best.transplants
+            || (cur.transplants == best.transplants && cur.weight > best.weight)
+        {
+            *best = cur.clone();
+        }
+        if idx >= cycles.len() || cur.transplants + remaining_t <= best.transplants {
+            return;
+        }
+        let mut rem = remaining_t;
+        for ci in idx..cycles.len() {
+            rem -= cycles[ci].transplants;
+            if used & masks[ci] == 0 {
+                let mut next = cur.clone();
+                next.transplants += cycles[ci].transplants;
+                next.weight += cycles[ci].weight;
+                next.cycles_selected += 1;
+                dfs(ci + 1, used | masks[ci], next, rem, cycles, masks, best);
+            }
+        }
+    }
+    dfs(0, 0, CoverResult::default(), total_t, &cycles, &masks, &mut best);
+    Some(best)
+}
+
+/// Generate a random pool of incompatible donor-recipient pairs for benchmarking.
+pub fn generate_exchange_pool(n: usize, seed: u64) -> Vec<ExchangePair> {
+    let mut rng = StdRng::seed_from_u64(seed);
+    let bt = |r: &mut StdRng| match r.gen_range(0..100) {
+        0..=39 => BloodType::A,
+        40..=59 => BloodType::O,
+        60..=79 => BloodType::B,
+        _ => BloodType::AB,
+    };
+    (0..n)
+        .map(|i| ExchangePair {
+            pair_id: format!("P{i}"),
+            anon_id: format!("anon-{i}"),
+            donor: ExchangeDonor {
+                blood_type: bt(&mut rng),
+                liver_volume: rng.gen_range(1200.0..1700.0),
+                region_km: rng.gen_range(0.0..150.0),
+            },
+            recipient: ExchangeRecipient {
+                blood_type: bt(&mut rng),
+                meld_score: rng.gen_range(10.0..40.0),
+                body_weight: rng.gen_range(50.0..90.0),
+                region_km: rng.gen_range(0.0..150.0),
+                waiting_days: rng.gen_range(30.0..2000.0),
+            },
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -320,5 +583,42 @@ mod tests {
                     link.from_pair, link.to_pair, link.score);
             }
         }
+    }
+
+    #[test]
+    fn test_enumerate_cycles_finds_two_way() {
+        let pairs = vec![
+            make_pair("A", O, 1400.0, A, 30.0, 70.0),
+            make_pair("B", A, 1300.0, O, 25.0, 65.0),
+        ];
+        let graph = build_compatibility_graph(&pairs);
+        let cycles = enumerate_cycles(&graph, 3);
+        assert!(cycles.iter().any(|c| c.transplants == 2));
+    }
+
+    #[test]
+    fn test_cycle_cover_qubo_matches_exact_and_beats_greedy() {
+        // Deterministic (LCG-seeded annealing): on a 10-pair pool the QUBO
+        // reaches the brute-force optimum and beats uncoordinated greedy.
+        let pairs = generate_exchange_pool(10, 7);
+        let greedy = greedy_cover(&pairs, 3);
+        let qubo = solve_cycle_cover_qubo(&pairs, 3, 1.0, 0.05, 50.0, 5000, 7);
+        let exact = exact_cover(&pairs, 3, 4000).expect("small pool is exact-solvable");
+
+        // Feasibility: QUBO can never exceed the true optimum.
+        assert!(qubo.transplants <= exact.transplants);
+        // Optimality: exact dominates greedy.
+        assert!(exact.transplants >= greedy.transplants);
+        // QUBO reaches the optimum and strictly beats greedy on this instance.
+        assert_eq!(qubo.transplants, exact.transplants);
+        assert!(qubo.transplants > greedy.transplants);
+    }
+
+    #[test]
+    fn test_decode_cover_is_feasible() {
+        // No pair may receive twice: total transplants ≤ pool size.
+        let pairs = generate_exchange_pool(12, 3);
+        let qubo = solve_cycle_cover_qubo(&pairs, 3, 1.0, 0.05, 50.0, 4000, 3);
+        assert!(qubo.transplants <= pairs.len());
     }
 }
