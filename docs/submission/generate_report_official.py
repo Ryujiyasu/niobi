@@ -212,10 +212,22 @@ def add_formatted_content(doc, ref_para, content_text):
             i += 1
             continue
 
-        p = add_paragraph_after(doc, last)
-        _add_rich_text(p, line)
-        last = p
+        # plain paragraph: merge consecutive soft-wrapped lines into ONE paragraph.
+        # report_draft.md hard-wraps mid-sentence; emitting one paragraph per line made
+        # the template's 8pt paragraph-after spacing apply between every wrapped line
+        # (huge line gaps + page bloat). Join with "" since JP wraps without spaces.
+        buf = [line.strip()]
         i += 1
+        while i < len(lines):
+            nl = lines[i]; nls = nl.strip()
+            if nls in ("", "---") or nls.startswith("```") or nls.startswith("|"):
+                break
+            if re.match(r"^(#{2,6})\s+", nl) or re.match(r"^\s*[-*]\s+", nl):
+                break
+            buf.append(nls); i += 1
+        p = add_paragraph_after(doc, last)
+        _add_rich_text(p, "".join(buf))
+        last = p
     return last
 
 
