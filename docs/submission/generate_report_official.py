@@ -19,6 +19,7 @@ from docx import Document
 from docx.shared import Pt, RGBColor
 from docx.oxml.ns import qn
 from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.text import WD_LINE_SPACING
 
 BASE_DIR = Path(__file__).parent
 TEMPLATE = BASE_DIR / "report_template_official.docx"
@@ -116,6 +117,14 @@ def clear_paragraph(para):
 
 def add_paragraph_after(doc, ref_para, text="", style=None):
     new_para = doc.add_paragraph(text, style=style)
+    # Explicit, compact line spacing. The template docDefault uses lineRule="auto"
+    # which, with CJK font metrics (large line height), renders very loose (~1.6-1.8x).
+    # Fix to an exact line height for a normal, professional density.
+    pf = new_para.paragraph_format
+    pf.line_spacing = Pt(15)
+    pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+    pf.space_after = Pt(4)
+    pf.space_before = Pt(0)
     ref_para._element.addnext(new_para._element)
     return new_para
 
@@ -320,6 +329,34 @@ def remove_template_furniture(doc):
                 clear_paragraph(p)
 
 
+def remove_blank_lead(doc):
+    """Remove leftover empty paragraphs between the cover table and the first
+    content paragraph, so the report does not start with a blank page 2.
+    (The template's 留意点 instructions sat here; removing them left empty shells
+    that, combined with the page break before §1, pushed content to page 3.)"""
+    body = doc.element.body
+    cover_seen = False
+    to_remove = []
+    for el in body.iterchildren():
+        tag = el.tag.split("}")[-1]
+        if tag == "tbl":
+            txt = "".join(t.text or "" for t in el.iter(qn("w:t")))
+            if "応募代表者氏名" in txt:
+                cover_seen = True
+            continue
+        if tag != "p" or not cover_seen:
+            continue
+        txt = "".join(t.text or "" for t in el.iter(qn("w:t"))).strip()
+        has_break = any(b.get(qn("w:type")) == "page" for b in el.iter(qn("w:br")))
+        has_sect = el.find(".//" + qn("w:sectPr")) is not None
+        if txt == "" and not has_break and not has_sect:
+            to_remove.append(el)
+        else:
+            break
+    for el in to_remove:
+        el.getparent().remove(el)
+
+
 def main():
     data = parse_markdown(DRAFT)
     cover, sections = data["cover"], data["sections"]
@@ -393,6 +430,8 @@ def main():
             last = add_formatted_content(doc, h, body)
 
     # Anonymize document metadata (template carries 作成者 'Hiroki Okuda (JP)').
+    remove_blank_lead(doc)
+
     doc.core_properties.author = ""
     doc.core_properties.last_modified_by = ""
 
