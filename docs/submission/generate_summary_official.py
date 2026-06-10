@@ -32,7 +32,7 @@ COVER = {
     "選択課題ID": "Q-2",
     "選択課題名": "創薬エコシステムの強化に向けた医療データ共有アプリケーション・アルゴリズムの開発",
     "提案名": "Niobi — プライバシー保護型臓器移植マッチングの分散最適化",
-    "解決案ID": "",
+    "解決案ID": "スクリーニング採択者でないため該当なし",
 }
 
 # (text, indent_level). Use ** for bold. Lines starting with no bullet if level<0.
