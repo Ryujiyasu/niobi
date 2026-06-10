@@ -70,7 +70,7 @@ S4 = [
 S5_LEFT = [
     ("**単一臓器:** Hungarianが全スケールで最適、QUBO(焼きなまし)は2-6%劣る(正直な評価)。N=200でGreedy比+12マッチ", 0),
     ("**多臓器(負の結果):** 救命数では分離可能=smart greedy=QUBO=厳密最適、量子優位なし。**交換cycle-cover(本命):** QUBOが貪欲に**8/8勝利**・厳密最適に一致・差は規模で拡大(+1.5→+3.8移植)", 0),
-    ("**FHE実測:** composite_score 21µs、full pipeline **50.91ms/ペア**(production_8192)", 0),
+    ("**FHE実測:** composite_score 21µs(test_small)、full pipeline **50.91ms/ペア**(production_8192)", 0),
     ("**スケール:** 全臓器スコアリング国内11分→**GPU 48秒**、全世界18分(冷阻血時間内)", 0),
     ("**GPU:** N=8192でCUDA **14x**高速化(暗号安全性は不変)", 0),
 ]
@@ -354,7 +354,7 @@ def build_benchmark_slide(prs, layout):
     # right panel callouts
     panels = [
         ("割当は分離可能（量子は不要）", "単一臓器=Hungarian最適。多臓器同時割当も救命数では smart greedy=QUBO=厳密最適。当初の複合移植優位仮説はベンチで否定（正直な負の結果）", RGBColor(0x6B, 0x6B, 0x6B)),
-        ("FHE暗号計算（実測）", "composite_score 21µs ／ full pipeline 50.91ms/ペア（production_8192, N=8192）。MKFHE bootstrappingで異鍵暗号文の比較を復号なしで実証", RGBColor(0x2E, 0x5B, 0x88)),
+        ("FHE暗号計算（実測）", "composite_score 21µs（test_small）／ full pipeline 50.91ms/ペア（production_8192, N=8192）。MKFHE bootstrappingで異鍵暗号文の比較を復号なしで実証", RGBColor(0x2E, 0x5B, 0x88)),
         ("スケール", "全臓器スコアリング 国内11分 → GPU 48秒、全世界18分（冷阻血時間内）。N=8192でCUDA 14x高速化", RGBColor(0x4A, 0x90, 0xA4)),
     ]
     y = 1.5
