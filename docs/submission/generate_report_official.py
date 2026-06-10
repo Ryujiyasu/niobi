@@ -420,6 +420,14 @@ def main():
                 if ai:
                     extras.append(("AI活用方針", ai))
                 break
+        # references LAST (per 要項: 参考文献は報告書末尾に記載)
+        for k in sections:
+            if "参考文献" in k:
+                refs = re.sub(r"^---\s*$", "", sections[k], flags=re.MULTILINE)
+                refs = refs.replace("以上", "").strip()
+                if refs:
+                    extras.append(("参考文献", refs))
+                break
         # anchor: empty para right before 以上
         anchor = doc.add_paragraph("")
         closing_para._element.addprevious(anchor._element)
